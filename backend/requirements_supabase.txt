@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pdfplumber
+python-multipart
+python-dotenv
+supabase==2.10.0

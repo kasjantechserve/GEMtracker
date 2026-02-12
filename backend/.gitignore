@@ -1,0 +1,16 @@
+# Local environment
+.env
+
+# Cache
+__pycache__/
+*.py[cod]
+
+# Data
+uploads/
+temp_uploads/
+backups/
+*.db
+
+# Build
+dist/
+build/

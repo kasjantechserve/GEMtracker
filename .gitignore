@@ -1,0 +1,41 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs
+.vscode/
+.idea/
+
+# Database
+*.db
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependency source folders
+fastapi-master/
+pdfplumber-*/
+psycopg2-binary-*/
+pydantic-*/
+python_multipart-*/
+sqlalchemy-*/
+uvicorn-main/
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
