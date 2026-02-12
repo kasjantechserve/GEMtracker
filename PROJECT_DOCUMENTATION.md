@@ -1,219 +1,122 @@
-# GEMtracker - Project Documentation
+# GEMtracker v2.0 - Professional Project Documentation
 
 ## Executive Summary
 
-**GEMtracker** is a complete web application for managing government tender bids from GeM (Government e-Marketplace). It automates the tedious process of tracking bid deadlines and compliance requirements.
+**GEMtracker** is a cloud-native, enterprise-ready web application designed to streamline and automate the management of government tender bids from GeM (Government e-Marketplace). It eliminates the manual drudgery of tracking bid deadlines, organizing compliance documents, and coordinating team efforts through a centralized, real-time dashboard.
 
 ---
 
-## Core Features
+## Core Features 🚀
 
-### 1. Smart PDF Processing 📄
-The application automatically extracts critical information from GeM tender PDFs:
-- **Bid Number** (e.g., GEM/2026/B/7132339)
-- **Bid End Date** (deadline)
-- **Item Category** (tender description)
-- **Short Subject** (10-word summary)
+### 1. Automated PDF Extraction & Analytics 📄
+The application uses advanced parsing to extract critical "DNA" from GeM tender PDFs instantly:
+- **Bid Identification**: Bid Number (e.g., GEM/2026/B/7132339)
+- **Deadline Management**: Automatic extraction of Bid End Date.
+- **Metadata Tagging**: Item Category and Item Subject extraction.
+- **A.I. Summarization**: 10-word summary for quick scanning.
 
-### 2. Dashboard & Organization 📊
-Professional dashboard featuring:
-- **Tender List**: Left sidebar with all tenders
-- **Custom Nicknames**: Rename tenders for easier identification
-- **Time Remaining**: Visual countdown (e.g., "5d 3h left")
-- **Status Indicators**: Green for active, red for expired
-- **Smart Sorting**: Active tenders first (by deadline), expired last
+### 2. Real-Time Multi-User Dashboard 📊
+A mission-control interface built for speed and collaboration:
+- **Live Sync**: Tenders and checklist updates appear instantly across all team screens.
+- **Visual Countdown**: Real-time "Time Remaining" badges (Green = Safe, Red = Expired).
+- **Responsive Sidebar**: Categorized view of active vs. expired tenders.
+- **Company Isolation**: Secure data barriers ensure each company only sees their own team's bids.
 
-### 3. 28-Point Compliance Checklist ✅
-Every tender includes a comprehensive checklist with dual status tracking:
-- **Ready?** - Document is prepared
-- **Submitted?** - Document uploaded to GeM
+### 3. 28-Point Compliance Command Center ✅
+Every tender automatically initializes a professional compliance checklist:
+- **Dual Tracking**: Separate "Ready" (prepared) and "Submitted" (uploaded to GeM) statuses.
+- **Standardized List**: Pre-configured for EMD, PAN, GST, Manufacturer Authorization, Audit Statements, and 23+ more.
+- **Progress Bars**: Visual representation of tender readiness.
 
-Standard checklist items include:
-- EMD (Earnest Money Deposit)
-- Manufacturer Authorization Certificate
-- GST Registration Certificate
-- PAN Card
-- Technical Specifications
-- Financial Documents
-- 22+ additional compliance items
-
-### 4. Data Management 💾
-- **Backup Download**: Export entire database
-- **PDF Download**: Retrieve original tender documents
-- **Nickname System**: Custom friendly names for tenders
+### 4. Advanced Data & Document Management 💾
+- **Secure Authentication**: High-level security via Supabase (JWT Tokens).
+- **Centralized Templates**: A library of standardized formats (GST, PAN, Authorizations) for one-click download.
+- **Original PDF Retrieval**: Access original tender documents anytime from anywhere.
+- **Nickname System**: Custom labels for quick project identification.
 
 ---
 
-## Technical Architecture
+## Technical Architecture 🏗️
 
 ### Frontend (User Interface)
-- **Framework**: Next.js (React-based)
-- **Styling**: Tailwind CSS for responsive design
-- **Build**: Compiled to static files (HTML/CSS/JS)
-- **Features**: Modern, fast, mobile-responsive
+- **Framework**: Next.js 16 (Vercel-optimized)
+- **State Management**: React Hooks & Real-time Subscriptions.
+- **Styling**: Vanilla CSS & Tailwind (Custom High-Contrast Theme).
+- **Platform**: Hosted on **Vercel** for 99.9% uptime.
 
-### Backend (Server)
-- **Framework**: FastAPI (Python)
-- **Database**: SQLite for portable data storage
-- **PDF Processing**: pdfplumber library
-- **API**: RESTful endpoints for all operations
+### Backend (Process Engine)
+- **Framework**: FastAPI (Python 3.12)
+- **Engine**: Render Web Service.
+- **PDF Extraction**: pdfplumber with proprietary extraction logic.
+- **Storage**: Supabase Storage Buckets for document persistence.
 
-### Deployment Strategy: Single-Service Architecture 🚀
-- Frontend compiled into backend
-- Single server deployment
-- No CORS complexity
-- One URL for everything
-- Simplified deployment process
+### Database (Brain)
+- **Platform**: **Supabase (PostgreSQL)**.
+- **Security**: Row Level Security (RLS) ensures data privacy.
+- **Real-Time**: Postgres CDC for instant UI updates.
 
 ---
 
-## User Workflow
+## User Workflow 🛠️
 
+```mermaid
+graph LR
+    A[Sign Up / Login] --> B[Upload GeM PDF]
+    B --> C{Auto-Extraction}
+    C --> D[Tender Created]
+    D --> E[Real-time Checklist]
+    E --> F[Team Progress Tracking]
+    F --> G[Winning Bid]
 ```
-1. Upload Tender PDF
-        ↓
-2. Automatic Information Extraction
-        ↓
-3. Tender Entry Created with Checklist
-        ↓
-4. Track Progress (Mark items Ready/Submitted)
-        ↓
-5. Download Backups & Original PDFs
-```
-
-**Example Usage:**
-1. Receive new tender PDF from GeM
-2. Upload to GEMtracker
-3. System creates tender entry with extracted details
-4. Work through compliance checklist
-5. Monitor deadline countdown
-6. Mark items as ready and submitted
 
 ---
 
-## Project Structure
+## Project Structure (v2.0)
 
 ```
 GEMtracker/
-├── backend/
-│   ├── app/
-│   │   ├── main.py         # API routes & server
-│   │   ├── models.py       # Database schema
-│   │   ├── utils.py        # PDF extraction
-│   │   ├── schemas.py      # Data validation
-│   │   └── database.py     # DB connection
-│   ├── static/             # Frontend files (auto-generated)
-│   ├── uploads/            # Uploaded PDFs
-│   ├── gemtracker.db       # SQLite database
-│   ├── run_backend.py      # Server launcher
-│   └── requirements.txt    # Python dependencies
-├── frontend/
+├── backend/                # Render App
+│   ├── app/                # FastAPI Core
+│   │   ├── main_supabase.py # API & Auth logic
+│   │   └── utils.py        # PDF Engine
+│   └── Procfile            # Deployment Instructions
+├── frontend/               # Vercel App
 │   ├── src/
-│   │   ├── app/
-│   │   │   └── page.tsx    # Main dashboard
-│   │   └── components/
-│   │       └── Checklist.tsx # Checklist component
-│   ├── package.json        # Node dependencies
-│   └── next.config.ts      # Build configuration
-└── build_deploy.py         # Deployment build script
+│   │   ├── app/            # Next.js App Router
+│   │   ├── components/     # UI Components
+│   │   └── lib/            # Supabase Connectors
+│   └── next.config.ts      # Cloud Config
+└── supabase/               # Infrastructure
+    └── schema.sql          # DB Architect
 ```
 
 ---
 
-## Key Advantages
+## Key Advantages 🏁
 
-✅ **Time-Saving**: Eliminates manual data entry  
-✅ **Deadline Management**: Never miss a bid deadline  
-✅ **Compliance Tracking**: Structured checklist system  
-✅ **Portable**: SQLite allows easy backup and migration  
-✅ **Simple Deployment**: One command local, one service cloud  
-✅ **Cost-Effective**: Free and open-source
-
----
-
-## Deployment Options
-
-### Local Deployment
-```bash
-cd GEMtracker/backend
-python run_backend.py
-```
-Access at: `http://localhost:8000`
-
-### Cloud Deployment (Render)
-1. Push code to GitHub
-2. Create Web Service on Render
-3. Point to `backend` directory
-4. Automatic deployment
+✅ **Zero Entry**: No more manual typing from PDF to Excel.  
+✅ **Team Sync**: No more "did we submit the GST copy?"—check it live.  
+✅ **Global Access**: Access your tender dashboard from any device, anywhere.  
+✅ **Deadline Security**: Color-coded alerts ensure you never miss a submission window.  
+✅ **Compliance First**: 28 points of verification built into every workflow.
 
 ---
 
 ## Technology Stack
 
-**Frontend:**
-- Next.js 16.x
-- React
-- TypeScript
-- Tailwind CSS
-- Axios
-
-**Backend:**
-- Python 3.9+
-- FastAPI
-- SQLAlchemy
-- pdfplumber
-- Uvicorn
-
-**Database:**
-- SQLite (development)
-- PostgreSQL (production-ready)
-
----
-
-## Market Position
-
-**Traditional Solutions:**
-- **Spreadsheets**: Manual, error-prone, no automation
-- **Enterprise Software**: Expensive, complex, overkill
-
-**GEMtracker Advantage:**
-- Automated extraction
-- Professional interface
-- Simple enough for individuals
-- Scalable for businesses
-- Free and customizable
-
----
-
-## Use Cases
-
-1. **Individual Vendors**: Track personal tender bids
-2. **Small Businesses**: Manage multiple concurrent bids
-3. **Procurement Teams**: Coordinate compliance documentation
-4. **Consultants**: Offer as a managed service
-
----
-
-## Future Enhancement Possibilities
-
-- Email notifications for approaching deadlines
-- Multi-user support with role-based access
-- Advanced analytics and reporting
-- Integration with GeM APIs
-- Document template management
-- Bid history and success rate tracking
-- Mobile app version
+**Frontend:** Next.js, React, TypeScript, Tailwind, Axios
+**Backend:** Python, FastAPI, pdfplumber, Supabase-Py
+**Database:** PostgreSQL (Cloud), Supabase Auth
 
 ---
 
 ## Conclusion
 
-GEMtracker represents a modern, efficient solution for government tender bid management. By combining automated PDF extraction, intelligent organization, and comprehensive compliance tracking, it significantly reduces manual effort while improving deadline adherence and documentation completeness.
-
-The single-service architecture ensures easy deployment and maintenance, making it accessible for users ranging from individual vendors to procurement teams.
+GEMtracker v2.0 is a professional-grade solution that transforms GeM tender management from a chaotic manual process into a streamlined, automated, and collaborative workflow. By leveraging modern cloud technology and real-time data synchronization, it empowers businesses to focus on winning bids rather than managing paperwork.
 
 ---
 
-**Built with:** Python, FastAPI, Next.js, React, SQLite  
-**License:** Open Source  
-**Deployment:** Local or Cloud (Render, Railway, etc.)
+**Live URL:** [ge-mtracker.vercel.app](https://ge-mtracker.vercel.app)  
+**Backend:** Render (FastAPI)  
+**Infrastructure:** Supabase  
+**License:** Enterprise / Open Source

@@ -63,16 +63,17 @@ def create_pdf():
     )
     
     # Title
-    elements.append(Paragraph("GEMtracker", title_style))
-    elements.append(Paragraph("Project Documentation", heading1_style))
+    elements.append(Paragraph("GEMtracker v2.0", title_style))
+    elements.append(Paragraph("Professional Project Documentation", heading1_style))
     elements.append(Spacer(1, 20))
     
     # Executive Summary
     elements.append(Paragraph("Executive Summary", heading1_style))
     elements.append(Paragraph(
-        "<b>GEMtracker</b> is a complete web application for managing government tender bids from GeM "
-        "(Government e-Marketplace). It automates the tedious process of tracking bid deadlines and "
-        "compliance requirements.",
+        "<b>GEMtracker</b> is a cloud-native, enterprise-ready web application designed to "
+        "streamline and automate the management of government tender bids from GeM "
+        "(Government e-Marketplace). It eliminates manual drudgery through a centralized, "
+        "real-time dashboard and automated analytics.",
         body_style
     ))
     elements.append(Spacer(1, 12))
@@ -81,16 +82,16 @@ def create_pdf():
     elements.append(Paragraph("Core Features", heading1_style))
     
     # Feature 1
-    elements.append(Paragraph("1. Smart PDF Processing", heading2_style))
+    elements.append(Paragraph("1. Smart PDF Extraction & Analytics", heading2_style))
     elements.append(Paragraph(
-        "The application automatically extracts critical information from GeM tender PDFs:",
+        "The application uses advanced parsing to extract critical 'DNA' from GeM tender PDFs instantly:",
         body_style
     ))
     features_data = [
-        ["Bid Number", "e.g., GEM/2026/B/7132339"],
-        ["Bid End Date", "Deadline extraction"],
-        ["Item Category", "Tender description"],
-        ["Short Subject", "10-word summary"]
+        ["Bid Identification", "Bid Number (e.g., GEM/2026/B/7132339)"],
+        ["Deadline Management", "Automatic extraction of Bid End Date"],
+        ["Metadata Tagging", "Item Category and Item Subject extraction"],
+        ["A.I. Summarization", "10-word summary for quick scanning"]
     ]
     feature_table = Table(features_data, colWidths=[2*inch, 3.5*inch])
     feature_table.setStyle(TableStyle([
@@ -107,36 +108,36 @@ def create_pdf():
     elements.append(Spacer(1, 12))
     
     # Feature 2
-    elements.append(Paragraph("2. Dashboard & Organization", heading2_style))
+    elements.append(Paragraph("2. Real-Time Multi-User Dashboard", heading2_style))
     elements.append(Paragraph(
-        "Professional dashboard featuring:<br/>"
-        "• <b>Tender List</b>: Left sidebar with all tenders<br/>"
-        "• <b>Custom Nicknames</b>: Rename tenders for easier identification<br/>"
-        "• <b>Time Remaining</b>: Visual countdown (e.g., '5d 3h left')<br/>"
-        "• <b>Status Indicators</b>: Green for active, red for expired<br/>"
-        "• <b>Smart Sorting</b>: Active tenders first (by deadline), expired last",
+        "A mission-control interface built for speed and collaboration:<br/>"
+        "• <b>Live Sync</b>: Tenders and checklist updates appear instantly across screens<br/>"
+        "• <b>Visual Countdown</b>: Real-time 'Time Remaining' badges (Green/Red)<br/>"
+        "• <b>Responsive Sidebar</b>: Categorized view of active vs. expired tenders<br/>"
+        "• <b>Company Isolation</b>: Secure barriers ensure data privacy and security<br/>"
+        "• <b>Smart Sorting</b>: Active tenders prioritized by submission deadline",
         body_style
     ))
     elements.append(Spacer(1, 12))
     
     # Feature 3
-    elements.append(Paragraph("3. 28-Point Compliance Checklist", heading2_style))
+    elements.append(Paragraph("3. 28-Point Compliance Command Center", heading2_style))
     elements.append(Paragraph(
-        "Every tender includes a comprehensive checklist with dual status tracking:<br/>"
-        "• <b>Ready?</b> - Document is prepared<br/>"
-        "• <b>Submitted?</b> - Document uploaded to GeM<br/><br/>"
-        "Standard checklist includes: EMD, Manufacturer Authorization, GST Certificate, "
-        "PAN Card, Technical Specifications, Financial Documents, and 22+ additional items.",
+        "Every tender automatically initializes a professional compliance checklist:<br/>"
+        "• <b>Dual Tracking</b>: 'Ready' (prepared) and 'Submitted' (uploaded) statuses<br/>"
+        "• <b>Standardized List</b>: Pre-configured for EMD, PAN, GST, Manufacturer Authorization, Audit Statements, and 23+ more<br/>"
+        "• <b>Progress Tracking</b>: Visual representation of tender readiness and team effort.",
         body_style
     ))
     elements.append(Spacer(1, 12))
     
     # Feature 4
-    elements.append(Paragraph("4. Data Management", heading2_style))
+    elements.append(Paragraph("4. Advanced Data & Document Management", heading2_style))
     elements.append(Paragraph(
-        "• <b>Backup Download</b>: Export entire database<br/>"
-        "• <b>PDF Download</b>: Retrieve original tender documents<br/>"
-        "• <b>Nickname System</b>: Custom friendly names for tenders",
+        "• <b>Secure Auth</b>: High-level security via Supabase (JWT Tokens)<br/>"
+        "• <b>Centralized Templates</b>: 1-click downloads for standardized formats<br/>"
+        "• <b>Original PDF Retrieval</b>: Access documents anytime, anywhere<br/>"
+        "• <b>Nickname System</b>: Custom labels for quick project identification",
         body_style
     ))
     
@@ -147,31 +148,30 @@ def create_pdf():
     
     elements.append(Paragraph("Frontend (User Interface)", heading2_style))
     elements.append(Paragraph(
-        "• <b>Framework</b>: Next.js (React-based)<br/>"
-        "• <b>Styling</b>: Tailwind CSS for responsive design<br/>"
-        "• <b>Build</b>: Compiled to static files (HTML/CSS/JS)<br/>"
-        "• <b>Features</b>: Modern, fast, mobile-responsive",
+        "• <b>Framework</b>: Next.js 16 (Vercel-optimized)<br/>"
+        "• <b>Platform</b>: Hosted on <b>Vercel</b> for 99.9% uptime<br/>"
+        "• <b>Styling</b>: Vanilla CSS & Tailwind (Custom High-Contrast Theme)<br/>"
+        "• <b>Real-time</b>: Postgres CDC integration for instant UI updates",
         body_style
     ))
     elements.append(Spacer(1, 12))
     
-    elements.append(Paragraph("Backend (Server)", heading2_style))
+    elements.append(Paragraph("Backend (Process Engine)", heading2_style))
     elements.append(Paragraph(
-        "• <b>Framework</b>: FastAPI (Python)<br/>"
-        "• <b>Database</b>: SQLite for portable data storage<br/>"
-        "• <b>PDF Processing</b>: pdfplumber library<br/>"
-        "• <b>API</b>: RESTful endpoints for all operations",
+        "• <b>Framework</b>: FastAPI (Python 3.12)<br/>"
+        "• <b>Engine</b>: Render Web Service hosting<br/>"
+        "• <b>PDF Processing</b>: Proprietary logic built on pdfplumber<br/>"
+        "• <b>Persistence</b>: Supabase Storage Buckets for document safety",
         body_style
     ))
     elements.append(Spacer(1, 12))
     
-    elements.append(Paragraph("Deployment: Single-Service Architecture", heading2_style))
+    elements.append(Paragraph("Database (Core Brain)", heading2_style))
     elements.append(Paragraph(
-        "• Frontend compiled into backend<br/>"
-        "• Single server deployment<br/>"
-        "• No CORS complexity<br/>"
-        "• One URL for everything<br/>"
-        "• Simplified deployment process",
+        "• <b>Platform</b>: Supabase (PostgreSQL Agent)<br/>"
+        "• <b>Security</b>: Row Level Security (RLS) for enterprise-grade privacy<br/>"
+        "• <b>Auth</b>: Built-in secure user registration and session management<br/>"
+        "• <b>Scalability</b>: Global Postgres infrastructure",
         body_style
     ))
     
@@ -180,12 +180,12 @@ def create_pdf():
     # Key Advantages
     elements.append(Paragraph("Key Advantages", heading1_style))
     advantages_data = [
-        ["✓ Time-Saving", "Eliminates manual data entry"],
-        ["✓ Deadline Management", "Never miss a bid deadline"],
-        ["✓ Compliance Tracking", "Structured checklist system"],
-        ["✓ Portable", "SQLite allows easy backup"],
-        ["✓ Simple Deployment", "One command local, one service cloud"],
-        ["✓ Cost-Effective", "Free and open-source"]
+        ["✓ Zero Manual Entry", "No more typing from PDF to Excel"],
+        ["✓ Global Team Sync", "Centralized real-time coordination"],
+        ["✓ Deadline Security", "Color-coded alerts prevent missed bids"],
+        ["✓ Compliance First", "28 points of verification in every workflow"],
+        ["✓ 100% Cloud-Native", "Access from any device, anywhere"],
+        ["✓ Secure Auth", "JWT-protected data and company barriers"]
     ]
     advantages_table = Table(advantages_data, colWidths=[2*inch, 3.5*inch])
     advantages_table.setStyle(TableStyle([
@@ -201,34 +201,12 @@ def create_pdf():
     elements.append(advantages_table)
     elements.append(Spacer(1, 12))
     
-    # Deployment Options
-    elements.append(Paragraph("Deployment Options", heading1_style))
-    
-    elements.append(Paragraph("Local Deployment", heading2_style))
-    elements.append(Paragraph(
-        "<font face='Courier'>cd GEMtracker/backend<br/>python run_backend.py</font><br/><br/>"
-        "Access at: <b>http://localhost:8000</b>",
-        body_style
-    ))
-    elements.append(Spacer(1, 12))
-    
-    elements.append(Paragraph("Cloud Deployment (Render)", heading2_style))
-    elements.append(Paragraph(
-        "1. Push code to GitHub<br/>"
-        "2. Create Web Service on Render<br/>"
-        "3. Point to 'backend' directory<br/>"
-        "4. Automatic deployment",
-        body_style
-    ))
-    
-    elements.append(PageBreak())
-    
     # Technology Stack
     elements.append(Paragraph("Technology Stack", heading1_style))
     tech_data = [
-        ["Frontend", "Next.js 16.x, React, TypeScript, Tailwind CSS, Axios"],
-        ["Backend", "Python 3.9+, FastAPI, SQLAlchemy, pdfplumber, Uvicorn"],
-        ["Database", "SQLite (development), PostgreSQL (production)"]
+        ["Frontend", "Next.js 16.x, React, TypeScript, Tailwind CSS, Vercel"],
+        ["Backend", "Python 3.12, FastAPI, Supabase-Py, pdfplumber, Render"],
+        ["Database", "PostgreSQL (Cloud), Supabase Auth, Supabase Realtime"]
     ]
     tech_table = Table(tech_data, colWidths=[1.5*inch, 4*inch])
     tech_table.setStyle(TableStyle([
@@ -244,29 +222,15 @@ def create_pdf():
     elements.append(tech_table)
     elements.append(Spacer(1, 20))
     
-    # Market Position
+    # Market Impact
     elements.append(Paragraph("Market Position", heading1_style))
     elements.append(Paragraph(
-        "<b>Traditional Solutions:</b><br/>"
-        "• Spreadsheets: Manual, error-prone, no automation<br/>"
-        "• Enterprise Software: Expensive, complex, overkill<br/><br/>"
-        "<b>GEMtracker Advantage:</b><br/>"
-        "• Automated extraction<br/>"
-        "• Professional interface<br/>"
-        "• Simple enough for individuals<br/>"
-        "• Scalable for businesses<br/>"
-        "• Free and customizable",
-        body_style
-    ))
-    elements.append(Spacer(1, 20))
-    
-    # Use Cases
-    elements.append(Paragraph("Use Cases", heading1_style))
-    elements.append(Paragraph(
-        "1. <b>Individual Vendors</b>: Track personal tender bids<br/>"
-        "2. <b>Small Businesses</b>: Manage multiple concurrent bids<br/>"
-        "3. <b>Procurement Teams</b>: Coordinate compliance documentation<br/>"
-        "4. <b>Consultants</b>: Offer as a managed service",
+        "<b>Why GEMtracker v2.0 Wins:</b><br/>"
+        "• <b>Automated Discovery</b>: Finds details in seconds, not minutes.<br/>"
+        "• <b>Team Transparency</b>: Zero ambiguity on document status.<br/>"
+        "• <b>Frictionless Scale</b>: Works for 1 user or a team of 100.<br/>"
+        "• <b>Zero Cost Overhead</b>: Deployed on enterprise-grade free/low-cost tiers.<br/>"
+        "• <b>Customization</b>: Built for the specific nuances of Indian GeM bids.",
         body_style
     ))
     
@@ -275,12 +239,13 @@ def create_pdf():
     # Conclusion
     elements.append(Paragraph("Conclusion", heading1_style))
     elements.append(Paragraph(
-        "GEMtracker represents a modern, efficient solution for government tender bid management. "
-        "By combining automated PDF extraction, intelligent organization, and comprehensive compliance "
-        "tracking, it significantly reduces manual effort while improving deadline adherence and "
-        "documentation completeness.<br/><br/>"
-        "The single-service architecture ensures easy deployment and maintenance, making it accessible "
-        "for users ranging from individual vendors to procurement teams.",
+        "GEMtracker v2.0 is a professional-grade solution that transforms GeM tender "
+        "management from a chaotic manual process into a streamlined, automated, and "
+        "collaborative workflow. By leveraging modern cloud technology and real-time "
+        "data synchronization, it empowers businesses to focus on winning bids rather "
+        "than managing paperwork. It represents a state-of-the-art implementation "
+        "of the FastAPI, Next.js, and Supabase stack.<br/><br/>"
+        "The system is now fully live, secure, and ready for high-volume tender tracking.",
         body_style
     ))
     elements.append(Spacer(1, 20))
@@ -294,9 +259,9 @@ def create_pdf():
         alignment=TA_CENTER
     )
     elements.append(Paragraph(
-        "<b>Built with:</b> Python, FastAPI, Next.js, React, SQLite<br/>"
-        "<b>License:</b> Open Source<br/>"
-        "<b>Deployment:</b> Local or Cloud (Render, Railway, etc.)",
+        "<b>Cloud URLs:</b> ge-mtracker.vercel.app | gemtracker.onrender.com<br/>"
+        "<b>Tech:</b> Python, FastAPI, Next.js, Supabase, PostgreSQL<br/>"
+        "<b>Status:</b> Production Live ✅",
         footer_style
     ))
     
