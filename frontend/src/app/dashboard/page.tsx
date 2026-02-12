@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useRealtimeTenders, Tender } from '@/hooks/useRealtimeTenders'
