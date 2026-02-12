@@ -48,11 +48,11 @@ export default function LoginForm() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
             <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
                 <h1 className="text-3xl font-bold text-blue-900 mb-2">GEMtracker</h1>
-                <p className="text-gray-600 mb-6">Tender Management System</p>
+                <p className="text-gray-800 font-medium mb-6">Tender Management System</p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-bold text-gray-900 mb-1">
                             Email
                         </label>
                         <input
@@ -60,13 +60,13 @@ export default function LoginForm() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-400 text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                             placeholder="you@company.com"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-bold text-gray-900 mb-1">
                             Password
                         </label>
                         <input
@@ -74,7 +74,7 @@ export default function LoginForm() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-400 text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                             placeholder="••••••••"
                         />
                     </div>
