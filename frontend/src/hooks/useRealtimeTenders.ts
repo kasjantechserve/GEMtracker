@@ -1,3 +1,4 @@
+'use client';
 /**
  * Real-time Tenders Hook
  * Subscribes to tender changes and provides live updates

@@ -1,3 +1,4 @@
+'use client';
 import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { FileUp, Eye, Check, X, Loader2 } from 'lucide-react';
