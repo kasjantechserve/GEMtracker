@@ -241,6 +241,7 @@ async def update_checklist_item(
     item_id: str,
     is_ready: Optional[bool] = None,
     is_submitted: Optional[bool] = None,
+    document_url: Optional[str] = None,
     notes: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
@@ -253,6 +254,8 @@ async def update_checklist_item(
             update_data["is_ready"] = is_ready
         if is_submitted is not None:
             update_data["is_submitted"] = is_submitted
+        if document_url is not None:
+            update_data["document_url"] = document_url
         if notes is not None:
             update_data["notes"] = notes
         
@@ -346,6 +349,42 @@ async def download_tender_pdf(tender_id: str, current_user: dict = Depends(get_c
         return {"download_url": file_url['signedURL']}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to download PDF: {str(e)}")
+
+@app.get("/api/checklist/{item_id}/download")
+async def download_checklist_doc(item_id: str, current_user: dict = Depends(get_current_user)):
+    """Download a compliance checklist document"""
+    try:
+        client = get_client()
+        
+        # Get checklist item
+        item = client.table("checklist_items")\
+            .select("document_url, tender_id")\
+            .eq("id", item_id)\
+            .single()\
+            .execute()
+        
+        if not item.data or not item.data.get("document_url"):
+            raise HTTPException(status_code=404, detail="Document not found")
+            
+        # Verify ownership via tender
+        tender = client.table("tenders")\
+            .select("company_id")\
+            .eq("id", item.data["tender_id"])\
+            .single()\
+            .execute()
+            
+        if not tender.data or tender.data["company_id"] != current_user["company_id"]:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
+        # Get signed URL (bucket name is compliance-docs as per prompt/setup)
+        file_url = client.storage.from_('compliance-docs').create_signed_url(
+            item.data["document_url"],
+            60
+        )
+        
+        return {"download_url": file_url['signedURL']}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to download document: {str(e)}")
 
 # ============================================
 # HEALTH CHECK

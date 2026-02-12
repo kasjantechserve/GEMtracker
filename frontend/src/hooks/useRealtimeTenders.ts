@@ -41,6 +41,7 @@ export function useRealtimeTenders(companyId: string | null) {
     const [tenders, setTenders] = useState<Tender[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     useEffect(() => {
         if (!companyId) {
@@ -167,7 +168,12 @@ export function useRealtimeTenders(companyId: string | null) {
             supabase.removeChannel(channel)
             supabase.removeChannel(checklistChannel)
         }
-    }, [companyId])
+    }, [companyId, refreshTrigger])
 
-    return { tenders, loading, error, refetch: () => { } }
+    return {
+        tenders,
+        loading,
+        error,
+        refetch: () => setRefreshTrigger(prev => prev + 1)
+    }
 }
