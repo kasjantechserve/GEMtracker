@@ -18,7 +18,7 @@ interface Template {
 export default function TemplatesPage() {
     const [templates, setTemplates] = useState<Template[]>([])
     const [loading, setLoading] = useState(true)
-    const [user, setUser] = useState(null)
+    const [user, setUser] = useState<any>(null)
     const router = useRouter()
 
     useEffect(() => {
