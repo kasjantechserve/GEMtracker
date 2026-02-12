@@ -68,7 +68,11 @@ export default function Dashboard() {
             const session = await supabase.auth.getSession()
             const token = session.data.session?.access_token
 
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+            const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+            const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
+
+            console.log('Attempting upload to:', `${apiUrl}/api/upload/`)
+
             const response = await fetch(`${apiUrl}/api/upload/`, {
                 method: 'POST',
                 headers: {
