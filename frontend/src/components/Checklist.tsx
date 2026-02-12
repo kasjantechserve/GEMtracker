@@ -40,7 +40,7 @@ export default function Checklist({ items, onUpdate }: ChecklistProps) {
             const storagePath = `${item.tender_id}/${item.code}/${file.name}`;
 
             const { data, error } = await supabase.storage
-                .from('compliance-docs')
+                .from('compliance_docs')
                 .upload(storagePath, file, { upsert: true });
 
             if (error) throw error;
@@ -70,7 +70,7 @@ export default function Checklist({ items, onUpdate }: ChecklistProps) {
         try {
             // 1. Delete from Storage
             const { error: storageError } = await supabase.storage
-                .from('compliance-docs')
+                .from('compliance_docs')
                 .remove([item.document_url]);
 
             if (storageError) throw storageError;
@@ -96,7 +96,7 @@ export default function Checklist({ items, onUpdate }: ChecklistProps) {
 
         try {
             const { data, error } = await supabase.storage
-                .from('compliance-docs')
+                .from('compliance_docs')
                 .createSignedUrl(item.document_url, 60);
 
             if (error) throw error;
