@@ -167,13 +167,23 @@ export default function Dashboard() {
         if (!tender.file_path) return
 
         try {
-            const { data, error } = await supabase.storage
-                .from('tender-pdfs')
-                .createSignedUrl(tender.file_path, 3600)
+            const token = (await supabase.auth.getSession()).data.session?.access_token
+            const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+            const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
 
-            if (error) throw error
-            setPdfPreviewUrl(data.signedUrl)
+            const response = await fetch(`${apiUrl}/api/tenders/${tender.id}/download`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({ detail: 'Failed to load preview' }))
+                throw new Error(err.detail || 'Failed to load preview')
+            }
+
+            const data = await response.json()
+            setPdfPreviewUrl(data.download_url)
         } catch (err: any) {
+            console.error('Preview error:', err)
             alert('Failed to load preview: ' + err.message)
         }
     }
