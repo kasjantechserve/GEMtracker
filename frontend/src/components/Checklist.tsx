@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { FileUp, Eye, Check, X, Loader2 } from 'lucide-react';
+import { FileUp, Eye, Check, X, Loader2, Trash2 } from 'lucide-react';
 
 interface ChecklistItem {
     id: string; // Changed to string UUID
@@ -20,6 +20,7 @@ interface ChecklistProps {
 
 export default function Checklist({ items, onUpdate }: ChecklistProps) {
     const [uploadingId, setUploadingId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
@@ -59,6 +60,36 @@ export default function Checklist({ items, onUpdate }: ChecklistProps) {
         }
     };
 
+    const handleRemoveDocument = async (itemId: string) => {
+        const item = items.find(i => i.id === itemId);
+        if (!item?.document_url) return;
+
+        if (!confirm(`Are you sure you want to remove the document for ${item.code}?`)) return;
+
+        setDeletingId(itemId);
+        try {
+            // 1. Delete from Storage
+            const { error: storageError } = await supabase.storage
+                .from('compliance-docs')
+                .remove([item.document_url]);
+
+            if (storageError) throw storageError;
+
+            // 2. Update Database
+            await onUpdate(itemId, {
+                document_url: null,
+                is_ready: false
+            });
+
+            alert(`${item.code} document removed successfully.`);
+        } catch (err: any) {
+            console.error('Removal failed:', err);
+            alert(`Removal failed: ${err.message}`);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     const handleViewDocument = async (itemId: string) => {
         const item = items.find(i => i.id === itemId);
         if (!item?.document_url) return;
@@ -86,7 +117,8 @@ export default function Checklist({ items, onUpdate }: ChecklistProps) {
                     <tr>
                         <th className="py-2 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
                         <th className="py-2 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Name</th>
-                        <th className="py-2 px-4 border-b text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="py-2 px-4 border-b text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="py-2 px-4 border-b text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Remove</th>
                         <th className="py-2 px-4 border-b text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ready?</th>
                         <th className="py-2 px-4 border-b text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted?</th>
                     </tr>
@@ -96,7 +128,7 @@ export default function Checklist({ items, onUpdate }: ChecklistProps) {
                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                             <td className="py-2 px-4 text-sm font-medium text-gray-900">{item.code}</td>
                             <td className="py-2 px-4 text-sm text-gray-700">{item.name}</td>
-                            <td className="py-2 px-4 text-right space-x-2">
+                            <td className="py-2 px-4 text-center space-x-2">
                                 {item.document_url ? (
                                     <button
                                         onClick={() => handleViewDocument(item.id)}
@@ -121,6 +153,24 @@ export default function Checklist({ items, onUpdate }: ChecklistProps) {
                                         <FileUp size={18} />
                                     )}
                                 </button>
+                            </td>
+                            <td className="py-2 px-4 text-center">
+                                {item.document_url ? (
+                                    <button
+                                        onClick={() => handleRemoveDocument(item.id)}
+                                        disabled={deletingId === item.id}
+                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                                        title="Delete Document"
+                                    >
+                                        {deletingId === item.id ? (
+                                            <Loader2 size={18} className="animate-spin" />
+                                        ) : (
+                                            <Trash2 size={18} />
+                                        )}
+                                    </button>
+                                ) : (
+                                    <span className="text-gray-300">-</span>
+                                )}
                             </td>
                             <td className="py-2 px-4 text-center">
                                 <input
