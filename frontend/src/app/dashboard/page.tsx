@@ -38,6 +38,8 @@ export default function Dashboard() {
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
+    const [editingTender, setEditingTender] = useState<{ id: string, name: string } | null>(null)
+    const [newNickname, setNewNickname] = useState('')
     const router = useRouter()
 
     const { tenders, loading, error: realtimeError, refetch } = useRealtimeTenders(companyId)
@@ -124,6 +126,74 @@ export default function Dashboard() {
             window.location.reload()
         } catch (err: any) {
             alert(`Delete failed: ${err.message}`)
+        }
+    }
+
+    const handleDownloadTender = async (tenderId: string, tenderName: string) => {
+        try {
+            const session = await supabase.auth.getSession()
+            const token = session.data.session?.access_token
+            const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+            const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
+
+            const response = await fetch(`${apiUrl}/api/tenders/${tenderId}/download`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+
+            if (!response.ok) throw new Error('Failed to get download URL')
+            const { download_url } = await response.json()
+
+            // Create a temporary link and trigger download
+            const link = document.createElement('a')
+            link.href = download_url
+            link.download = `${tenderName}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        } catch (err: any) {
+            alert(`Download failed: ${err.message}`)
+        }
+    }
+
+    const handleViewTender = async (tenderId: string) => {
+        try {
+            const session = await supabase.auth.getSession()
+            const token = session.data.session?.access_token
+            const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+            const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
+
+            const response = await fetch(`${apiUrl}/api/tenders/${tenderId}/download`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+
+            if (!response.ok) throw new Error('Failed to get view URL')
+            const { download_url } = await response.json()
+            setPdfPreviewUrl(download_url)
+        } catch (err: any) {
+            alert(`Could not open preview: ${err.message}`)
+        }
+    }
+
+    const handleEditTender = async () => {
+        if (!editingTender) return
+        try {
+            const session = await supabase.auth.getSession()
+            const token = session.data.session?.access_token
+            const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+            const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
+
+            const response = await fetch(`${apiUrl}/api/tenders/${editingTender.id}?nickname=${encodeURIComponent(newNickname)}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+
+            if (!response.ok) throw new Error('Failed to update nickname')
+
+            alert('Nickname updated successfully!')
+            setEditingTender(null)
+            refetch()
+        } catch (err: any) {
+            alert(`Update failed: ${err.message}`)
         }
     }
 
@@ -281,10 +351,18 @@ export default function Dashboard() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground hover:text-primary">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleViewTender(tender.id); }}
+                                                    className="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground hover:text-primary"
+                                                    title="Quick View"
+                                                >
                                                     <Eye size={16} />
                                                 </button>
-                                                <button className="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground hover:text-primary">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDownloadTender(tender.id, tender.nickname || tender.bid_number); }}
+                                                    className="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground hover:text-primary"
+                                                    title="Download PDF"
+                                                >
                                                     <Download size={16} />
                                                 </button>
                                                 <div className="relative group/menu">
@@ -293,10 +371,20 @@ export default function Dashboard() {
                                                     </button>
                                                     {/* Quick Action Hub */}
                                                     <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-lg shadow-xl z-20 hidden group-hover/menu:block">
-                                                        <button className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingTender({ id: tender.id, name: tender.nickname || tender.bid_number });
+                                                                setNewNickname(tender.nickname || '');
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                                        >
                                                             <Edit2 size={14} /> Edit
                                                         </button>
-                                                        <button className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); alert('Reminder feature coming soon!'); }}
+                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                                        >
                                                             <Send size={14} /> Send Reminder
                                                         </button>
                                                         <div className="border-t border-border" />
@@ -368,6 +456,46 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Modals */}
+            {pdfPreviewUrl && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card w-full max-w-5xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-4 border-b border-border flex items-center justify-between">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <FileText className="text-primary" size={20} /> PDF Preview
+                            </h3>
+                            <button onClick={() => setPdfPreviewUrl(null)} className="p-2 hover:bg-accent rounded-lg transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <iframe src={pdfPreviewUrl} className="flex-1 w-full border-none" title="PDF Preview" />
+                    </div>
+                </div>
+            )}
+
+            {editingTender && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+                        <h3 className="text-xl font-bold mb-4">Edit Tender Nickname</h3>
+                        <p className="text-sm text-muted-foreground mb-6">Enter a familiar name for tender <span className="font-bold text-foreground">{editingTender.name}</span></p>
+
+                        <input
+                            type="text"
+                            className="w-full px-4 py-2 bg-background border border-border rounded-xl mb-6 focus:ring-2 focus:ring-primary/20 outline-none"
+                            placeholder="e.g. Office Supplies 2026"
+                            value={newNickname}
+                            onChange={(e) => setNewNickname(e.target.value)}
+                            autoFocus
+                        />
+
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => setEditingTender(null)} className="px-4 py-2 rounded-xl border border-border hover:bg-accent transition-all font-medium">Cancel</button>
+                            <button onClick={handleEditTender} className="px-6 py-2 rounded-xl bg-primary text-primary-foreground font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20">Save Updates</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
