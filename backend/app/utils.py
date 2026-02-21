@@ -1,6 +1,9 @@
 import google.generativeai as genai
 import os
 import json
+import re
+import pdfplumber
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()

@@ -57,9 +57,9 @@ export default function Sidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${isActive
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all group hover-lift ${isActive
+                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]'
+                                : 'hover:bg-accent text-muted-foreground hover:text-foreground'
                                 }`}
                         >
                             <item.icon size={22} className={isActive ? 'text-primary-foreground' : 'group-hover:text-foreground'} />

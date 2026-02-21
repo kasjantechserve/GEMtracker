@@ -26,6 +26,7 @@ import {
     Plus
 } from 'lucide-react'
 import Checklist from '@/components/Checklist'
+import { formatDate } from '@/lib/dateUtils'
 
 export default function Dashboard() {
     const [user, setUser] = useState<User | null>(null)
@@ -268,7 +269,7 @@ export default function Dashboard() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-medium">{tender.bid_end_date ? new Date(tender.bid_end_date).toLocaleDateString() : '--'}</span>
+                                                <span className="text-sm font-medium">{formatDate(tender.bid_end_date)}</span>
                                                 <span className="text-[10px] font-bold uppercase opacity-70">{calculateTimeRemaining(tender.bid_end_date)}</span>
                                             </div>
                                         </td>

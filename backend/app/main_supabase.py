@@ -97,12 +97,18 @@ async def upload_pdf(
         except Exception as e:
             print(f"DEBUG: PDF Extraction failed: {e}")
             if os.path.exists(temp_path): os.remove(temp_path)
-            raise HTTPException(status_code=400, detail=f"PDF parsing error: {str(e)}")
+            raise HTTPException(
+                status_code=422, 
+                detail=f"Unable to parse tender PDF. Please ensure it is a valid GeM bid document. Error: {str(e)}"
+            )
         
         if not details.get("bid_number"):
             print("DEBUG: No bid number found in PDF")
             if os.path.exists(temp_path): os.remove(temp_path)
-            raise HTTPException(status_code=400, detail="Could not extract bid number from PDF")
+            raise HTTPException(
+                status_code=400, 
+                detail="Could not extract bid number from PDF. Please check if the document contains a valid GeM Bid Number."
+            )
         
         # 3. Upload PDF to Supabase Storage
         storage_path = f"{current_user['company_id']}/{details['bid_number']}_{int(datetime.now().timestamp())}.pdf"
