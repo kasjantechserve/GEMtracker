@@ -347,58 +347,60 @@ export default function Dashboard() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider ${tender.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'
-                                                }`}>
-                                                {tender.status}
-                                            </span>
+                                            {(() => {
+                                                const isExpired = tender.bid_end_date && new Date(tender.bid_end_date) < new Date();
+                                                const status = isExpired ? 'expired' : (tender.status || 'active');
+                                                return (
+                                                    <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${status === 'active'
+                                                        ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                                                        : 'bg-red-500/10 text-red-500 border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
+                                                        }`}>
+                                                        {status}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleViewTender(tender.id); }}
-                                                    className="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground hover:text-primary"
+                                                    className="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg transition-all duration-200 shadow-sm hover:shadow-primary/30 active:scale-95"
                                                     title="Quick View"
                                                 >
-                                                    <Eye size={16} />
+                                                    <Eye size={18} />
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDownloadTender(tender.id, tender.nickname || tender.bid_number); }}
-                                                    className="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground hover:text-primary"
+                                                    className="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg transition-all duration-200 shadow-sm hover:shadow-primary/30 active:scale-95"
                                                     title="Download PDF"
                                                 >
-                                                    <Download size={16} />
+                                                    <Download size={18} />
                                                 </button>
                                                 <div className="relative group/menu">
-                                                    <button className="p-1.5 hover:bg-background rounded transition-colors text-muted-foreground hover:text-primary">
-                                                        <MoreVertical size={16} />
+                                                    <button className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-foreground">
+                                                        <MoreVertical size={18} />
                                                     </button>
                                                     {/* Quick Action Hub */}
-                                                    <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-lg shadow-xl z-20 hidden group-hover/menu:block">
+                                                    <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-xl shadow-2xl z-20 hidden group-hover/menu:block py-1 animate-in fade-in zoom-in-95 duration-100">
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setEditingTender({ id: tender.id, name: tender.nickname || tender.bid_number });
                                                                 setNewNickname(tender.nickname || '');
                                                             }}
-                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-3 transition-colors"
                                                         >
-                                                            <Edit2 size={14} /> Edit
+                                                            <Edit2 size={16} className="text-muted-foreground" /> Edit Info
                                                         </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); alert('Reminder feature coming soon!'); }}
-                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
-                                                        >
-                                                            <Send size={14} /> Send Reminder
-                                                        </button>
-                                                        <div className="border-t border-border" />
+                                                        <div className="border-t border-border my-1" />
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleDeleteTender(tender.id, tender.nickname || tender.bid_number);
                                                             }}
-                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-destructive/10 text-destructive flex items-center gap-2"
+                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-destructive/10 text-destructive flex items-center gap-3 transition-colors"
                                                         >
-                                                            <Trash2 size={14} /> Delete
+                                                            <Trash2 size={16} /> Delete Entry
                                                         </button>
                                                     </div>
                                                 </div>
@@ -414,49 +416,50 @@ export default function Dashboard() {
                 {/* Right: Compliance Overview */}
                 <div className="xl:col-span-1 space-y-8">
                     {selectedTender ? (
-                        <div className="bento-card bg-primary/5 border-primary/20 animate-in fade-in slide-in-from-right duration-300">
+                        <div className="bento-card border-primary/20 bg-gradient-to-br from-primary/5 to-transparent animate-in fade-in slide-in-from-right duration-300">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-bold text-lg">Compliance Hub</h3>
-                                <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full">{selectedTender.bid_number}</span>
+                                <span className="text-[10px] font-bold bg-primary text-primary-foreground px-2 py-0.5 rounded-full uppercase tracking-tighter shadow-sm">{selectedTender.bid_number}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-6">{selectedTender.nickname || "No nickname set"}</p>
+                            <p className="text-sm text-muted-foreground mb-6 font-medium">{selectedTender.nickname || "Set a nickname for easier tracking"}</p>
 
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-3 bg-card border border-border rounded-lg">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-4 bg-background/50 border border-border rounded-xl transition-all hover:border-green-500/30 group">
                                     <div className="flex items-center gap-3">
-                                        <Check className="text-green-500" size={18} />
-                                        <span className="text-sm font-medium">Ready Items</span>
+                                        <div className="p-2 bg-green-500/10 rounded-lg text-green-500 group-hover:scale-110 transition-transform">
+                                            <Check size={18} />
+                                        </div>
+                                        <span className="text-sm font-bold">Ready Items</span>
                                     </div>
-                                    <span className="font-bold">{selectedTender.checklist_items?.filter(i => i.is_ready).length || 0}</span>
+                                    <span className="text-lg font-black text-green-500">{selectedTender.checklist_items?.filter(i => i.is_ready).length || 0}</span>
                                 </div>
-                                <div className="flex items-center justify-between p-3 bg-card border border-border rounded-lg">
+                                <div className="flex items-center justify-between p-4 bg-background/50 border border-border rounded-xl transition-all hover:border-amber-500/30 group">
                                     <div className="flex items-center gap-3">
-                                        <Clock className="text-amber-500" size={18} />
-                                        <span className="text-sm font-medium">Pending</span>
+                                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500 group-hover:scale-110 transition-transform">
+                                            <Clock size={18} />
+                                        </div>
+                                        <span className="text-sm font-bold">Pending</span>
                                     </div>
-                                    <span className="font-bold">{selectedTender.checklist_items?.filter(i => !i.is_ready).length || 0}</span>
+                                    <span className="text-lg font-black text-amber-500">{selectedTender.checklist_items?.filter(i => !i.is_ready).length || 0}</span>
                                 </div>
                             </div>
 
                             <button
                                 onClick={() => setSelectedTender(null)}
-                                className="w-full mt-6 py-3 bg-card hover:bg-accent border border-border rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                                className="w-full mt-8 py-3 bg-secondary hover:bg-accent border border-border rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
                             >
                                 Close Details <X size={16} />
                             </button>
                         </div>
                     ) : (
-                        <div className="bento-card border-dashed flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-                            <AlertCircle size={40} className="mb-4 opacity-20" />
-                            <p className="font-medium text-sm">Select a tender for checklist management</p>
+                        <div className="bento-card border-dashed flex flex-col items-center justify-center p-12 text-center text-muted-foreground/60 min-h-[300px]">
+                            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-6 opacity-40">
+                                <AlertCircle size={32} />
+                            </div>
+                            <p className="font-bold text-foreground/80 mb-2">No Tender Selected</p>
+                            <p className="text-xs max-w-[200px] leading-relaxed">Select a tender from the list to manage its compliance checklist.</p>
                         </div>
                     )}
-
-                    {/* Quick Stats/Tips */}
-                    <div className="bento-card bg-card">
-                        <h3 className="font-bold text-sm mb-4 uppercase tracking-wider opacity-60">Pro Tip</h3>
-                        <p className="text-sm italic">"Tenders with higher urgency are pulsing in red. Complete the compliance checklist at least 48 hours before the deadline."</p>
-                    </div>
                 </div>
             </div>
 

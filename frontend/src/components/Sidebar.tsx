@@ -23,7 +23,6 @@ export default function Sidebar() {
     const menuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
         { name: 'Tenders', icon: FileText, href: '/tenders' },
-        { name: 'Templates', icon: Plus, href: '/templates' },
         { name: 'Settings', icon: Settings, href: '/settings' },
     ];
 

@@ -235,56 +235,56 @@ export default function TendersPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${tender.status === 'active'
-                                            ? 'bg-green-500/10 text-green-500'
-                                            : 'bg-destructive/10 text-destructive'
-                                            }`}>
-                                            <span className={`h-1.5 w-1.5 rounded-full ${tender.status === 'active' ? 'bg-green-500' : 'bg-destructive'}`} />
-                                            {tender.status}
-                                        </span>
+                                        {(() => {
+                                            const isExpired = tender.bid_end_date && new Date(tender.bid_end_date) < new Date();
+                                            const status = isExpired ? 'expired' : (tender.status || 'active');
+                                            return (
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status === 'active'
+                                                    ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                                                    : 'bg-red-500/10 text-red-500 border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
+                                                    }`}>
+                                                    <span className={`h-1.5 w-1.5 rounded-full ${status === 'active' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
+                                                    {status}
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => handleViewTender(tender.id)}
+                                                className="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg transition-all duration-200 shadow-sm hover:shadow-primary/30 active:scale-95"
                                                 title="Quick View"
-                                                className="p-2 hover:bg-background rounded-lg transition-colors text-muted-foreground hover:text-primary"
                                             >
                                                 <Eye size={18} />
                                             </button>
                                             <button
                                                 onClick={() => handleDownloadTender(tender.id, tender.nickname || tender.bid_number)}
+                                                className="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg transition-all duration-200 shadow-sm hover:shadow-primary/30 active:scale-95"
                                                 title="Download PDF"
-                                                className="p-2 hover:bg-background rounded-lg transition-colors text-muted-foreground hover:text-primary"
                                             >
                                                 <Download size={18} />
                                             </button>
                                             <div className="relative group/menu">
-                                                <button className="p-2 hover:bg-background rounded-lg transition-colors text-muted-foreground hover:text-primary">
+                                                <button className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-foreground">
                                                     <MoreVertical size={18} />
                                                 </button>
-                                                <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-lg shadow-xl z-20 hidden group-hover/menu:block text-left">
+                                                <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-xl shadow-2xl z-20 hidden group-hover/menu:block py-1 animate-in fade-in zoom-in-95 duration-100">
                                                     <button
                                                         onClick={() => {
                                                             setEditingTender({ id: tender.id, name: tender.nickname || tender.bid_number });
                                                             setNewNickname(tender.nickname || '');
                                                         }}
-                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-3 transition-colors"
                                                     >
-                                                        <Edit2 size={14} /> Edit
+                                                        <Edit2 size={16} className="text-muted-foreground" /> Edit Info
                                                     </button>
-                                                    <button
-                                                        onClick={() => alert('Reminder feature coming soon!')}
-                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2"
-                                                    >
-                                                        <Send size={14} /> Send Reminder
-                                                    </button>
-                                                    <div className="border-t border-border" />
+                                                    <div className="border-t border-border my-1" />
                                                     <button
                                                         onClick={() => handleDeleteTender(tender.id, tender.nickname || tender.bid_number)}
-                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-destructive/10 text-destructive flex items-center gap-2"
+                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-destructive/10 text-destructive flex items-center gap-3 transition-colors"
                                                     >
-                                                        <Trash2 size={14} /> Delete
+                                                        <Trash2 size={16} /> Delete Entry
                                                     </button>
                                                 </div>
                                             </div>
