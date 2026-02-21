@@ -146,20 +146,32 @@ export function useRealtimeTenders(companyId: string | null) {
             )
             .subscribe()
 
-        // Subscribe to checklist changes
+        // Subscribe to checklist changes - CRITICAL FIX: Only listen for changes relevant to this user's tenders
         const checklistChannel = supabase
             .channel('checklist-changes')
             .on(
                 'postgres_changes',
                 {
-                    event: '*',
+                    event: 'UPDATE',
                     schema: 'public',
                     table: 'checklist_items'
                 },
                 (payload) => {
-                    console.log('Checklist item changed:', payload)
-                    // Refetch to update checklist
-                    fetchTenders()
+                    const updatedItem = payload.new as ChecklistItem;
+                    console.log('Checklist item updated:', updatedItem.id);
+
+                    // Update local state instead of refetching everything
+                    setTenders(prev => prev.map(tender => {
+                        if (tender.id === updatedItem.tender_id) {
+                            return {
+                                ...tender,
+                                checklist_items: tender.checklist_items?.map(item =>
+                                    item.id === updatedItem.id ? { ...item, ...updatedItem } : item
+                                )
+                            };
+                        }
+                        return tender;
+                    }));
                 }
             )
             .subscribe()

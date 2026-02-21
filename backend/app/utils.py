@@ -15,7 +15,7 @@ if api_key:
 
 def extract_pdf_details(pdf_path: str):
     """
-    Extract bid details from PDF using Google Gemini AI with regex fallback
+    Extract bid details from PDF using fast regex matching with AI fallback.
     """
     details = {
         "bid_number": None,
@@ -24,101 +24,73 @@ def extract_pdf_details(pdf_path: str):
         "subject": None
     }
 
-    # Try AI Extraction first if API key is available
-    if api_key:
-        try:
-            print("DEBUG: Attempting AI extraction with Gemini...")
-            model = genai.GenerativeModel('gemini-2.0-flash') # or 'gemini-pro-vision' for multi-modal
-            
-            # Read PDF text using pdfplumber for AI context
-            text_context = ""
-            with pdfplumber.open(pdf_path) as pdf:
-                for i in range(min(5, len(pdf.pages))): # Scan first 5 pages
-                    page_text = pdf.pages[i].extract_text()
-                    if page_text:
-                        text_context += page_text + "\n"
-
-            prompt = f"""
-            You are an expert at parsing GeM (Government e-Marketplace) tender documents.
-            Extract the following details from the provided text context of a tender PDF:
-            - Bid Number (Format: GEM/YYYY/X/#######)
-            - Bid End Date/Time (Format: DD-MM-YYYY HH:MM:SS)
-            - Item Category (Full name)
-            - Subject (A concise summary of the tender in exactly 10 words)
-
-            Return the data in STRICT JSON format like this:
-            {{
-                "bid_number": "...",
-                "bid_end_date": "...",
-                "item_category": "...",
-                "subject": "..."
-            }}
-
-            Tender Text Context:
-            {text_context[:10000]} 
-            """
-
-            response = model.generate_content(prompt)
-            ai_data = json.loads(response.text.replace('```json', '').replace('```', '').strip())
-            
-            details["bid_number"] = ai_data.get("bid_number")
-            details["item_category"] = ai_data.get("item_category")
-            details["subject"] = ai_data.get("subject")
-            
-            if ai_data.get("bid_end_date"):
-                try:
-                    details["bid_end_date"] = datetime.strptime(ai_data["bid_end_date"], "%d-%m-%Y %H:%M:%S")
-                except:
-                    pass
-            
-            if details["bid_number"]:
-                print(f"DEBUG: AI extracted details successfully: {details['bid_number']}")
-                return details
-        except Exception as e:
-            print(f"DEBUG: AI extraction failed, falling back to regex: {e}")
-
-    # Fallback to Regex and pdfplumber
+    # 1. FAST REGEX SCAN (Directly read first 2 pages)
     try:
         with pdfplumber.open(pdf_path) as pdf:
             text = ""
+            # Limit to 2 pages for GeM - 99% of info is here
             for i in range(min(2, len(pdf.pages))):
                 page_text = pdf.pages[i].extract_text()
                 if page_text:
                     text += page_text + "\n"
             
-            if not text:
-                return details
+            if text:
+                # Extract Bid Number - GeM Format specific
+                bid_no_match = re.search(r"Bid Number(?:\s*/\s*िबड संख्या)?\s*[:\.]?\s*(GEM/\d{4}/[A-Z]/\d+)", text, re.IGNORECASE)
+                if bid_no_match:
+                    details["bid_number"] = bid_no_match.group(1).strip()
 
-            # 1. Extract Bid Number
-            bid_no_match = re.search(r"Bid Number(?:\s*/\s*िबड संख्या)?\s*[:\.]?\s*(GEM/[^\s\n\r]+)", text, re.IGNORECASE)
-            if not bid_no_match:
-                bid_no_match = re.search(r"(GEM/\d{4}/[A-Z]/\d+)", text)
-            if bid_no_match:
-                details["bid_number"] = bid_no_match.group(1).strip()
+                # Extract End Date
+                end_date_match = re.search(r"Bid End Date/Time(?:\s*/\s*िबड समाप्ति तिथि/समय)?\s*(\d{2}-\d{2}-\d{4}\s*\d{2}:\d{2}:\d{2})", text, re.IGNORECASE)
+                if end_date_match:
+                    try:
+                        details["bid_end_date"] = datetime.strptime(end_date_match.group(1), "%d-%m-%Y %H:%M:%S")
+                    except:
+                        pass
 
-            # 2. Extract End Date
-            end_date_match = re.search(r"Bid End Date/Time(?:\s*/\s*िबड समाप्ति तिथि/समय)?\s*(\d{2}-\d{2}-\d{4}\s*\d{2}:\d{2}:\d{2})", text, re.IGNORECASE)
-            if end_date_match:
+                # Extract Item Category
+                item_cat_match = re.search(r"Item Category(?:\s*/\s*मद श्रेणी)?\s*(.*)", text, re.IGNORECASE)
+                if item_cat_match:
+                    details["item_category"] = item_cat_match.group(1).strip()
+    except Exception as e:
+        print(f"DEBUG: Fast regex scan failed: {e}")
+
+    # 2. AI FALLBACK (Only if regex missed critical info)
+    if not details.get("bid_number") and api_key:
+        try:
+            print("DEBUG: Regex missed Bid Number. Attempting AI extraction with Gemini...")
+            model = genai.GenerativeModel('gemini-1.5-flash') # Ultra-fast model
+            
+            # Use same text context already extracted for efficiency
+            prompt = f"""
+            Extract GeM Bid Number, End Date (DD-MM-YYYY HH:MM:SS), and Item Category.
+            Return ONLY clean JSON.
+            Text: {text[:5000]}
+            """
+
+            response = model.generate_content(prompt)
+            ai_data = json.loads(response.text.replace('```json', '').replace('```', '').strip())
+            
+            if not details["bid_number"]: details["bid_number"] = ai_data.get("bid_number")
+            if not details["item_category"]: details["item_category"] = ai_data.get("item_category")
+            if not details["bid_end_date"] and ai_data.get("bid_end_date"):
                 try:
-                    details["bid_end_date"] = datetime.strptime(end_date_match.group(1), "%d-%m-%Y %H:%M:%S")
+                    details["bid_end_date"] = datetime.strptime(ai_data["bid_end_date"], "%d-%m-%Y %H:%M:%S")
                 except:
                     pass
+        except Exception as e:
+            print(f"DEBUG: AI fallback failed: {e}")
 
-            # 3. Extract Item Category
-            item_cat_match = re.search(r"Item Category(?:\s*/\s*मद श्रेणी)?\s*(.*)", text, re.IGNORECASE)
-            if item_cat_match:
-                full_category = item_cat_match.group(1).strip()
-                details["item_category"] = full_category
-                words = full_category.split()
-                details["subject"] = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
-            
-            if not details["bid_number"]:
-                filename = os.path.basename(pdf_path)
-                if filename.startswith("GEM"):
-                    details["bid_number"] = filename.split('.')[0]
+    # Fallback to filename if still nothing
+    if not details["bid_number"]:
+        filename = os.path.basename(pdf_path)
+        if filename.startswith("GEM"):
+            details["bid_number"] = filename.split('.')[0]
 
-    except Exception as e:
-        print(f"DEBUG: Error in fallback extraction: {e}")
+    # Generate subject if category exists
+    if details["item_category"] and not details["subject"]:
+        words = details["item_category"].split()
+        details["subject"] = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
 
     return details
 
