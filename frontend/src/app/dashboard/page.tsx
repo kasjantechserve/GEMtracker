@@ -295,7 +295,7 @@ export default function Dashboard() {
                         <h3 className="font-bold">New Tender</h3>
                         <p className="text-xs text-primary-foreground/70 mt-1">Upload PDF to start</p>
                     </div>
-                    <input type="file" accept="application/pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleUpload} disabled={uploading} />
+                    <input type="file" accept="application/pdf" className="absolute inset-0 opacity-0 cursor-pointer z-20" onChange={handleUpload} disabled={uploading} />
                 </div>
             </section>
 
