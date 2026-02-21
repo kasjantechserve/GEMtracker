@@ -232,6 +232,55 @@ async def update_tender(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update tender: {str(e)}")
 
+@app.delete("/api/tenders/{tender_id}")
+async def delete_tender(tender_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Delete a tender, its checklist items, and its PDF file from storage
+    """
+    try:
+        client = get_client()
+        
+        # 1. Get tender details (to get storage path)
+        tender_res = client.table("tenders")\
+            .select("file_path")\
+            .eq("id", tender_id)\
+            .eq("company_id", current_user["company_id"])\
+            .single()\
+            .execute()
+        
+        if not tender_res.data:
+            raise HTTPException(status_code=404, detail="Tender not found")
+        
+        file_path = tender_res.data.get("file_path")
+        
+        # 2. Delete from database (tenders and checklist_items via CASCADE)
+        # Note: In Supabase, if CASCADE is set, checklist_items will be deleted automatically.
+        # Based on schema_v2.sql, checklist_items has REFERENCES tenders(id) ON DELETE CASCADE.
+        db_res = client.table("tenders")\
+            .delete()\
+            .eq("id", tender_id)\
+            .eq("company_id", current_user["company_id"])\
+            .execute()
+        
+        if not db_res.data:
+            raise HTTPException(status_code=500, detail="Failed to delete tender record")
+        
+        # 3. Delete from storage if file_path exists
+        if file_path:
+            try:
+                client.storage.from_('tender-pdfs').remove([file_path])
+                print(f"DEBUG: Successfully deleted file from storage: {file_path}")
+            except Exception as se:
+                print(f"DEBUG: Warning: Failed to delete file from storage: {se}")
+                # We don't raise here because the main record is already gone
+        
+        return {"message": "Tender deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"DEBUG: Delete encounter error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete tender: {str(e)}")
+
 # ============================================
 # CHECKLIST ENDPOINTS
 # ============================================

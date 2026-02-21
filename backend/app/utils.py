@@ -1,17 +1,82 @@
-import pdfplumber
-import re
-from datetime import datetime
+import google.generativeai as genai
+import os
+import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Configure Google AI
+api_key = os.getenv("GOOGLE_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
 
 def extract_pdf_details(pdf_path: str):
+    """
+    Extract bid details from PDF using Google Gemini AI with regex fallback
+    """
     details = {
         "bid_number": None,
         "bid_end_date": None,
-        "item_category": None
+        "item_category": None,
+        "subject": None
     }
 
+    # Try AI Extraction first if API key is available
+    if api_key:
+        try:
+            print("DEBUG: Attempting AI extraction with Gemini...")
+            model = genai.GenerativeModel('gemini-2.0-flash') # or 'gemini-pro-vision' for multi-modal
+            
+            # Read PDF text using pdfplumber for AI context
+            text_context = ""
+            with pdfplumber.open(pdf_path) as pdf:
+                for i in range(min(5, len(pdf.pages))): # Scan first 5 pages
+                    page_text = pdf.pages[i].extract_text()
+                    if page_text:
+                        text_context += page_text + "\n"
+
+            prompt = f"""
+            You are an expert at parsing GeM (Government e-Marketplace) tender documents.
+            Extract the following details from the provided text context of a tender PDF:
+            - Bid Number (Format: GEM/YYYY/X/#######)
+            - Bid End Date/Time (Format: DD-MM-YYYY HH:MM:SS)
+            - Item Category (Full name)
+            - Subject (A concise summary of the tender in exactly 10 words)
+
+            Return the data in STRICT JSON format like this:
+            {{
+                "bid_number": "...",
+                "bid_end_date": "...",
+                "item_category": "...",
+                "subject": "..."
+            }}
+
+            Tender Text Context:
+            {text_context[:10000]} 
+            """
+
+            response = model.generate_content(prompt)
+            ai_data = json.loads(response.text.replace('```json', '').replace('```', '').strip())
+            
+            details["bid_number"] = ai_data.get("bid_number")
+            details["item_category"] = ai_data.get("item_category")
+            details["subject"] = ai_data.get("subject")
+            
+            if ai_data.get("bid_end_date"):
+                try:
+                    details["bid_end_date"] = datetime.strptime(ai_data["bid_end_date"], "%d-%m-%Y %H:%M:%S")
+                except:
+                    pass
+            
+            if details["bid_number"]:
+                print(f"DEBUG: AI extracted details successfully: {details['bid_number']}")
+                return details
+        except Exception as e:
+            print(f"DEBUG: AI extraction failed, falling back to regex: {e}")
+
+    # Fallback to Regex and pdfplumber
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            # Extract text from the first two pages to be safe
             text = ""
             for i in range(min(2, len(pdf.pages))):
                 page_text = pdf.pages[i].extract_text()
@@ -19,49 +84,38 @@ def extract_pdf_details(pdf_path: str):
                     text += page_text + "\n"
             
             if not text:
-                print("DEBUG: No text extracted from PDF")
                 return details
 
             # 1. Extract Bid Number
-            # Patterns: 
-            # - Bid Number: GEM/2025/B/6477908
-            # - Bid No.: GEM/2025/B/6477908
-            # - Bid Number / िबड संख्या : GEM/2025/B/6477908
             bid_no_match = re.search(r"Bid Number(?:\s*/\s*िबड संख्या)?\s*[:\.]?\s*(GEM/[^\s\n\r]+)", text, re.IGNORECASE)
             if not bid_no_match:
-                # Fallback for GEM format
                 bid_no_match = re.search(r"(GEM/\d{4}/[A-Z]/\d+)", text)
-            
             if bid_no_match:
                 details["bid_number"] = bid_no_match.group(1).strip()
 
             # 2. Extract End Date
-            # Pattern: Bid End Date/Time 31-07-2025 17:00:00
             end_date_match = re.search(r"Bid End Date/Time(?:\s*/\s*िबड समाप्ति तिथि/समय)?\s*(\d{2}-\d{2}-\d{4}\s*\d{2}:\d{2}:\d{2})", text, re.IGNORECASE)
             if end_date_match:
-                date_str = end_date_match.group(1)
                 try:
-                    details["bid_end_date"] = datetime.strptime(date_str, "%d-%m-%Y %H:%M:%S")
-                except ValueError:
-                    print(f"DEBUG: Failed to parse date: {date_str}")
+                    details["bid_end_date"] = datetime.strptime(end_date_match.group(1), "%d-%m-%Y %H:%M:%S")
+                except:
+                    pass
 
             # 3. Extract Item Category
             item_cat_match = re.search(r"Item Category(?:\s*/\s*मद श्रेणी)?\s*(.*)", text, re.IGNORECASE)
             if item_cat_match:
                 full_category = item_cat_match.group(1).strip()
                 details["item_category"] = full_category
-                # Generate short subject
                 words = full_category.split()
                 details["subject"] = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
             
-            # Use filename as fallback for bid number if all else fails (as last resort)
             if not details["bid_number"]:
                 filename = os.path.basename(pdf_path)
                 if filename.startswith("GEM"):
                     details["bid_number"] = filename.split('.')[0]
 
     except Exception as e:
-        print(f"DEBUG: Error in extract_pdf_details: {e}")
+        print(f"DEBUG: Error in fallback extraction: {e}")
 
     return details
 
