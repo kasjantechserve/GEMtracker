@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import shutil
 import os
+import tempfile
 from datetime import datetime
 from .supabase_client import get_supabase_client
 from . import utils
@@ -81,9 +82,9 @@ async def upload_pdf(
         client = get_client()
         
         # 1. Save file temporarily for parsing
-        temp_dir = "temp_uploads"
-        os.makedirs(temp_dir, exist_ok=True)
-        temp_path = os.path.join(temp_dir, file.filename)
+        # Use tempfile for Vercel/serverless compatibility
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, f"upload_{current_user['id']}_{file.filename}")
         print(f"DEBUG: Saving temp file to {temp_path}")
         
         with open(temp_path, "wb") as buffer:

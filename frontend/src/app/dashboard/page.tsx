@@ -89,10 +89,13 @@ export default function Dashboard() {
                 body: formData
             })
 
-            if (!response.ok) throw new Error('Upload failed')
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }))
+                throw new Error(errorData.detail || 'Upload failed')
+            }
             alert('PDF uploaded successfully!')
         } catch (err: any) {
-            alert(`Upload failed: ${err.message}`)
+            alert(`Upload Error: ${err.message}`)
         } finally {
             setUploading(false)
         }
