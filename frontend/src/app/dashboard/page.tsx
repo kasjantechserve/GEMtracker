@@ -40,6 +40,7 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState('')
     const [editingTender, setEditingTender] = useState<{ id: string, name: string } | null>(null)
     const [newNickname, setNewNickname] = useState('')
+    const [uploadProgress, setUploadProgress] = useState<{ current: number, total: number, status: string } | null>(null)
     const router = useRouter()
 
     const { tenders, loading, error: realtimeError, refetch } = useRealtimeTenders(companyId)
@@ -71,11 +72,10 @@ export default function Dashboard() {
     }, [router])
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files?.[0]) return
+        if (!e.target.files || e.target.files.length === 0) return
+        const files = Array.from(e.target.files)
         setUploading(true)
-        const file = e.target.files[0]
-        const formData = new FormData()
-        formData.append('file', file)
+        setUploadProgress({ current: 0, total: files.length, status: 'Initializing...' })
 
         try {
             const session = await supabase.auth.getSession()
@@ -83,21 +83,53 @@ export default function Dashboard() {
             const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
             const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
 
-            const response = await fetch(`${apiUrl}/api/upload/`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            })
+            if (files.length === 1) {
+                // Use single upload endpoint for single file
+                setUploadProgress({ current: 0, total: 1, status: `Uploading ${files[0].name}...` })
+                const formData = new FormData()
+                formData.append('file', files[0])
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }))
-                throw new Error(errorData.detail || 'Upload failed')
+                const response = await fetch(`${apiUrl}/api/upload/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                })
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }))
+                    throw new Error(errorData.detail || 'Upload failed')
+                }
+                setUploadProgress({ current: 1, total: 1, status: 'Success!' })
+                alert('PDF uploaded successfully!')
+            } else {
+                // Use bulk upload endpoint for multiple files
+                setUploadProgress({ current: 0, total: files.length, status: `Preparing ${files.length} files...` })
+                const formData = new FormData()
+                files.forEach(file => formData.append('files', file))
+
+                const response = await fetch(`${apiUrl}/api/upload-bulk/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                })
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: 'Bulk upload failed' }))
+                    throw new Error(errorData.detail || 'Bulk upload failed')
+                }
+
+                const results = await response.json()
+                setUploadProgress({ current: files.length, total: files.length, status: 'All files processed!' })
+                alert(`Successfully processed ${results.length} tenders!`)
             }
-            alert('PDF uploaded successfully!')
+            refetch()
         } catch (err: any) {
+            setError(`Upload Error: ${err.message}`)
             alert(`Upload Error: ${err.message}`)
         } finally {
             setUploading(false)
+            // Keep status visible for a bit then clear
+            setTimeout(() => setUploadProgress(null), 3000)
         }
     }
 
@@ -296,11 +328,36 @@ export default function Dashboard() {
                             <Plus className="text-primary-foreground" size={24} />
                         </div>
                         <h3 className="font-bold">New Tender</h3>
-                        <p className="text-xs text-primary-foreground/70 mt-1">Upload PDF to start</p>
+                        <p className="text-xs text-primary-foreground/70 mt-1">Upload PDFs to start</p>
                     </div>
-                    <input type="file" accept="application/pdf" className="absolute inset-0 opacity-0 cursor-pointer z-20" onChange={handleUpload} disabled={uploading} />
+                    <input type="file" multiple accept="application/pdf" className="absolute inset-0 opacity-0 cursor-pointer z-20" onChange={handleUpload} disabled={uploading} />
                 </div>
             </section>
+
+            {/* Upload Progress Indicator */}
+            {uploadProgress && (
+                <div className="bg-card border border-primary/20 p-4 rounded-xl flex items-center justify-between shadow-lg animate-in slide-in-from-top duration-300">
+                    <div className="flex items-center gap-4">
+                        <div className="relative h-10 w-10">
+                            <svg className="h-full w-full" viewBox="0 0 36 36">
+                                <circle cx="18" cy="18" r="16" fill="none" className="stroke-muted" strokeWidth="3" />
+                                <circle cx="18" cy="18" r="16" fill="none" className="stroke-primary" strokeWidth="3"
+                                    strokeDasharray={`${(uploadProgress.current / uploadProgress.total) * 100}, 100`}
+                                    strokeLinecap="round" transform="rotate(-90 18 18)"
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
+                                {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold">{uploadProgress.status}</p>
+                            <p className="text-xs text-muted-foreground">Processing {uploadProgress.current} of {uploadProgress.total} files</p>
+                        </div>
+                    </div>
+                    {uploading && <Loader2 className="animate-spin text-primary" size={20} />}
+                </div>
+            )}
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">

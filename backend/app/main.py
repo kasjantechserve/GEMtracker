@@ -34,7 +34,7 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
         shutil.copyfileobj(file.file, buffer)
     
     # Extract details
-    details = utils.extract_tender_details(file_path)
+    details = utils.extract_pdf_details(file_path)
     if not details.get("bid_number"):
         raise HTTPException(status_code=400, detail="Could not extract Bid Number from PDF")
 
@@ -63,6 +63,61 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
     db.commit()
     db.refresh(db_tender)
     return db_tender
+
+@app.post("/upload-bulk/", response_model=List[schemas.Tender])
+async def upload_bulk_pdfs(files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
+    results = []
+    errors = []
+    
+    upload_dir = "uploads"
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir)
+
+    for file in files:
+        try:
+            file_path = os.path.join(upload_dir, file.filename)
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # Extract details
+            details = utils.extract_pdf_details(file_path)
+            if not details.get("bid_number"):
+                errors.append(f"Failed to process {file.filename}: Could not extract Bid Number")
+                continue
+
+            # Create Tender
+            db_tender = models.Tender(
+                bid_number=details["bid_number"],
+                bid_end_date=details.get("bid_end_date"),
+                item_category=details.get("item_category"),
+                subject=details.get("subject"),
+                file_path=file_path
+            )
+            db.add(db_tender)
+            db.commit()
+            db.refresh(db_tender)
+
+            # Generate Checklist
+            checklist_data = utils.generate_checklist(db_tender.id)
+            for item in checklist_data:
+                db_item = models.ChecklistItem(
+                    tender_id=db_tender.id,
+                    name=item["name"],
+                    code=item["code"]
+                )
+                db.add(db_item)
+            
+            db.commit()
+            db.refresh(db_tender)
+            results.append(db_tender)
+        except Exception as e:
+            errors.append(f"Error processing {file.filename}: {str(e)}")
+            continue
+            
+    if not results and errors:
+        raise HTTPException(status_code=400, detail="\n".join(errors))
+        
+    return results
 
 @app.get("/tenders/{tender_id}/download")
 def download_pdf(tender_id: int, db: Session = Depends(get_db)):
