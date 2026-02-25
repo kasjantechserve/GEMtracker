@@ -18,7 +18,8 @@ import {
     Search,
     Filter,
     ArrowUpRight,
-    Send
+    Send,
+    Settings
 } from 'lucide-react';
 import { formatDate } from '@/lib/dateUtils';
 
@@ -35,6 +36,19 @@ export default function ParticipatedTendersPage() {
     const [analyzingScreenshot, setAnalyzingScreenshot] = useState(false);
     const [pendingUpdates, setPendingUpdates] = useState<TenderUpdate[]>([]);
     const [isPasting, setIsPasting] = useState(false);
+    const [clientApiKey, setClientApiKey] = useState<string>('');
+    const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+
+    useEffect(() => {
+        const savedKey = localStorage.getItem('GEM_CLIENT_AI_KEY');
+        if (savedKey) setClientApiKey(savedKey);
+    }, []);
+
+    const saveClientApiKey = (key: string) => {
+        localStorage.setItem('GEM_CLIENT_AI_KEY', key);
+        setClientApiKey(key);
+        setShowApiKeyInput(false);
+    };
 
     const { tenders, loading, refetch } = useRealtimeTenders(companyId);
 
@@ -86,11 +100,87 @@ export default function ParticipatedTendersPage() {
 
         window.addEventListener('paste', handleGlobalPaste);
         return () => window.removeEventListener('paste', handleGlobalPaste);
-    }, [tenders]); // Re-bind if tenders change, though uploadScreenshot uses latest tenders via ref
+    }, [tenders, clientApiKey]); // Re-bind if tenders or key changes
+
+    const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const base64String = reader.result as string;
+                resolve(base64String.split(',')[1]);
+            };
+            reader.onerror = error => reject(error);
+        });
+    };
+
+    const analyzeScreenshotLocally = async (file: File, apiKey: string) => {
+        console.log("DEBUG: Attempting client-side AI analysis...");
+        const base64Data = await fileToBase64(file);
+        const prompt = `
+        Analyze this screenshot from the GeM (Government e-Marketplace) portal.
+        Extract a list of all bids/tenders shown in the image.
+        For each bid, look for:
+        1. Bid Number (format: GEM/year/B/number)
+        2. Status (e.g., Technical Evaluation, Financial Evaluation, Bid Award, Evaluation)
+        3. Bid/RA Status (e.g., Active)
+        4. Any specific results mentioned (e.g., Disqualified, Technically Qualified)
+
+        Return the data as a clean JSON array of objects with these keys: 
+        "bid_number", "evaluation_status", "ra_status", "result_details".
+        If "Technical Evaluation" is highlighted/active in the progress bar, set evaluation_status to "Technical Evaluation".
+        If "Financial Evaluation" is active, set evaluation_status to "Financial Evaluation".
+        If "Bid Award" is active, set evaluation_status to "Awarded".
+        
+        ONLY return the JSON array. Do not include any markdown formatting like \`\`\`json.
+        `;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inline_data: { mime_type: file.type || "image/png", data: base64Data } }
+                    ]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error?.message || "Client-side analysis failed");
+        }
+
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        // Clean and parse JSON
+        let jsonText = text.trim();
+        if (jsonText.includes('```')) {
+            jsonText = jsonText.split('```')[1];
+            if (jsonText.startsWith('json')) jsonText = jsonText.substring(4);
+        }
+
+        return JSON.parse(jsonText.trim());
+    };
 
     const uploadScreenshot = async (file: File) => {
         setAnalyzingScreenshot(true);
         try {
+            // STEP 1: Try Client-Side Analysis if key exists
+            if (clientApiKey) {
+                try {
+                    const updates = await analyzeScreenshotLocally(file, clientApiKey);
+                    setPendingUpdates(updates);
+                    return;
+                } catch (localErr: any) {
+                    console.error("DEBUG: Local analysis failed, falling back to backend:", localErr);
+                }
+            }
+
+            // STEP 2: Try Backend Analysis
             const session = await supabase.auth.getSession();
             const token = session.data.session?.access_token;
             const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
@@ -107,13 +197,21 @@ export default function ParticipatedTendersPage() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Analysis failed' }));
-                throw new Error(errorData.detail || `Analysis failed (Status: ${response.status})`);
+                const detail = errorData.detail || `Analysis failed (Status: ${response.status})`;
+
+                // If it's a key error, prompt for local key
+                if (detail.toLowerCase().includes('api key') || detail.toLowerCase().includes('configured')) {
+                    setShowApiKeyInput(true);
+                    throw new Error("AI Key not configured on server. Please enter your key below for browser-based analysis.");
+                }
+
+                throw new Error(detail);
             }
 
             const data = await response.json();
             setPendingUpdates(data.updates);
         } catch (err: any) {
-            alert(`Error analyzing screenshot: ${err.message}`);
+            alert(err.message);
         } finally {
             setAnalyzingScreenshot(false);
         }
@@ -163,6 +261,13 @@ export default function ParticipatedTendersPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                        className={`p-2 rounded-xl border transition-all ${clientApiKey ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-muted-foreground border-border hover:border-primary/50'}`}
+                        title="AI Settings"
+                    >
+                        <Settings size={18} />
+                    </button>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                         <input
@@ -175,6 +280,38 @@ export default function ParticipatedTendersPage() {
                     </div>
                 </div>
             </header>
+
+            {/* API Key Configuration */}
+            {showApiKeyInput && (
+                <div className="bento-card border-primary/50 bg-primary/5 animate-in fade-in duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold flex items-center gap-2">
+                            <AlertCircle className="text-primary" size={18} />
+                            Browser-Based AI Configuration
+                        </h3>
+                        <button onClick={() => setShowApiKeyInput(false)}><X size={18} /></button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                        If your server configuration is failing, you can enter your Google Gemini API Key here.
+                        It will be stored locally in your browser to perform analysis on your device.
+                    </p>
+                    <div className="flex gap-2">
+                        <input
+                            type="password"
+                            placeholder="Paste AIazaSy..."
+                            className="flex-1 px-4 py-2 bg-card border border-border rounded-xl text-xs"
+                            value={clientApiKey}
+                            onChange={(e) => setClientApiKey(e.target.value)}
+                        />
+                        <button
+                            onClick={() => saveClientApiKey(clientApiKey)}
+                            className="px-6 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold"
+                        >
+                            Save Locally
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Paste Dropzone */}
             <div
