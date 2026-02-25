@@ -65,21 +65,28 @@ export default function ParticipatedTendersPage() {
         t.evaluation_status !== 'Awarded' && t.evaluation_status !== 'Disqualified'
     );
 
-    const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-        const items = e.clipboardData.items;
-        let imageFile: File | null = null;
+    useEffect(() => {
+        const handleGlobalPaste = async (e: ClipboardEvent) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
 
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                imageFile = items[i].getAsFile();
-                break;
+            let imageFile: File | null = null;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    imageFile = items[i].getAsFile();
+                    break;
+                }
             }
-        }
 
-        if (imageFile) {
-            await uploadScreenshot(imageFile);
-        }
-    }, []);
+            if (imageFile) {
+                console.log("DEBUG: Image detected in global paste");
+                await uploadScreenshot(imageFile);
+            }
+        };
+
+        window.addEventListener('paste', handleGlobalPaste);
+        return () => window.removeEventListener('paste', handleGlobalPaste);
+    }, [tenders]); // Re-bind if tenders change, though uploadScreenshot uses latest tenders via ref
 
     const uploadScreenshot = async (file: File) => {
         setAnalyzingScreenshot(true);
@@ -145,7 +152,7 @@ export default function ParticipatedTendersPage() {
     }
 
     return (
-        <div className="space-y-8 pb-10" onPaste={handlePaste}>
+        <div className="space-y-8 pb-10">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
