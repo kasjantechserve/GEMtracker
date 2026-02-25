@@ -182,43 +182,47 @@ export default function ParticipatedTendersPage() {
         }
         setTestingAI(true);
 
-        const versions = ['v1', 'v1beta'];
-        const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash-001', 'gemini-pro'];
-
-        let found = false;
-
         try {
-            for (const version of versions) {
-                for (const model of models) {
-                    console.log(`DEBUG: Testing ${version}/${model}...`);
-                    try {
-                        const response = await fetch(`https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${clientApiKey}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                contents: [{ parts: [{ text: "ping" }] }]
-                            })
-                        });
+            console.log("DEBUG: Discovering authorized models...");
+            // Use the listModels endpoint to see what this key can actually do
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${clientApiKey}`);
 
-                        if (response.ok) {
-                            const config = { version, model };
-                            saveClientApiKey(clientApiKey, config);
-                            alert(`Success! Found working configuration: ${version} with ${model}.`);
-                            found = true;
-                            break;
-                        }
-                    } catch (e) {
-                        continue;
-                    }
+            if (!response.ok) {
+                const err = await response.json();
+                const msg = err.error?.message || "Connection failed";
+
+                if (msg.toLowerCase().includes("location")) {
+                    throw new Error("Google AI is not yet available in your region. You may need to use a VPN or wait for region rollout.");
                 }
-                if (found) break;
+                throw new Error(msg);
             }
 
-            if (!found) {
-                alert("AI Connection Failed: Could not find a working model or API version for your key. Please check your Google AI Studio settings.");
+            const data = await response.json();
+            const models = data.models || [];
+
+            // Filter for flash models that support content generation
+            // Model names come back as 'models/gemini-1.5-flash'
+            const authorizedModels = models.filter((m: any) =>
+                m.supportedGenerationMethods.includes("generateContent") &&
+                (m.name.includes("flash") || m.name.includes("pro"))
+            );
+
+            if (authorizedModels.length === 0) {
+                throw new Error("Key is valid, but no 'Gemini' models were found in your account.");
             }
+
+            // Prefer 1.5-flash, then 1.5-flash-latest, etc.
+            const preferred = authorizedModels.find((m: any) => m.name.includes("1.5-flash")) || authorizedModels[0];
+            const cleanModelName = preferred.name.split("/").pop(); // Get 'gemini-1.5-flash' from 'models/gemini-1.5-flash'
+
+            const config = { version: 'v1', model: cleanModelName };
+            saveClientApiKey(clientApiKey, config);
+
+            alert(`Discovery Successful! Found authorized model: ${cleanModelName}. You can now paste screenshots.`);
+
         } catch (error: any) {
-            alert(`AI Search Error: ${error.message}`);
+            console.error("DEBUG: Discovery Error:", error);
+            alert(`AI Setup Failed: ${error.message}`);
         } finally {
             setTestingAI(false);
         }
