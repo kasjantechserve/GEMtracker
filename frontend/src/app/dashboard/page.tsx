@@ -107,7 +107,7 @@ export default function Dashboard() {
                 const formData = new FormData()
                 files.forEach(file => formData.append('files', file))
 
-                const response = await fetch(`${apiUrl}/api/upload-bulk/`, {
+                const response = await fetch(`${apiUrl}/api/upload-bulk`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData

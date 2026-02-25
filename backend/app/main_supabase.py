@@ -172,7 +172,13 @@ async def upload_pdf(
         print(f"DEBUG: Unexpected error in upload_pdf: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
+@app.get("/api/upload-bulk/")
+@app.get("/api/upload-bulk")
+async def bulk_upload_test():
+    return {"message": "Bulk upload endpoint is reachable. Please use POST to upload files."}
+
 @app.post("/api/upload-bulk/")
+@app.post("/api/upload-bulk")
 async def upload_bulk_pdfs(
     files: List[UploadFile] = File(...),
     current_user: dict = Depends(get_current_user)
