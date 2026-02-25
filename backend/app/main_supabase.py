@@ -190,7 +190,7 @@ async def analyze_screenshot(
         image_bytes = await file.read()
         
         # Extract details using AI
-        extracted_bids = utils.extract_details_from_image(image_bytes)
+        extracted_bids = utils.extract_details_from_image(image_bytes, file.content_type)
         print(f"DEBUG: Extracted {len(extracted_bids)} bids from screenshot")
         
         return {

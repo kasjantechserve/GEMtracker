@@ -98,7 +98,10 @@ export default function ParticipatedTendersPage() {
                 body: formData
             });
 
-            if (!response.ok) throw new Error('Analysis failed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Analysis failed' }));
+                throw new Error(errorData.detail || `Analysis failed (Status: ${response.status})`);
+            }
 
             const data = await response.json();
             setPendingUpdates(data.updates);
@@ -229,8 +232,8 @@ export default function ParticipatedTendersPage() {
                                     <FileText size={20} />
                                 </div>
                                 <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${tender.evaluation_status === 'Awarded'
-                                        ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                                        : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                    ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                                    : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                                     }`}>
                                     {tender.evaluation_status || 'Participated'}
                                 </span>

@@ -94,14 +94,16 @@ def extract_pdf_details(pdf_path: str):
 
     return details
 
-def extract_details_from_image(image_bytes: bytes):
+def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png"):
     """
     Extract bid details from a GeM portal screenshot using Gemini AI.
     """
     if not api_key:
-        raise Exception("Google API Key not configured")
+        print("DEBUG: Google API Key is missing in environment variables")
+        raise Exception("Google API Key not configured on server")
 
     try:
+        print(f"DEBUG: Initializing Gemini model for {mime_type} analysis...")
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Construct prompt for GeM screenshot analysis
@@ -120,21 +122,34 @@ def extract_details_from_image(image_bytes: bytes):
         If "Financial Evaluation" is active, set evaluation_status to "Financial Evaluation".
         If "Bid Award" is active, set evaluation_status to "Awarded".
         
-        ONLY return the JSON array.
+        ONLY return the JSON array. Do not include any markdown formatting like ```json.
         """
 
-        # Gemini 1.5 Flash supports image inputs directly
+        # Gemini 1.5 Flash supports image inputs directly via dictionary
+        # Some older versions might need 'inline_data' wrapper, but this is standard for 0.4.0+
         response = model.generate_content([
             prompt,
-            {"mime_type": "image/png", "data": image_bytes}
+            {"mime_type": mime_type, "data": image_bytes}
         ])
         
+        if not response.text:
+            print("DEBUG: Gemini returned an empty response")
+            raise Exception("Empty response from AI model")
+
         # Clean and parse JSON
-        json_text = response.text.replace('```json', '').replace('```', '').strip()
+        json_text = response.text
+        if "```" in json_text:
+            json_text = json_text.split("```")[1]
+            if json_text.startswith("json"):
+                json_text = json_text[4:]
+        
+        json_text = json_text.strip()
+        print(f"DEBUG: AI raw response: {json_text[:200]}...")
+        
         return json.loads(json_text)
     except Exception as e:
-        print(f"DEBUG: Image extraction failed: {e}")
-        raise e
+        print(f"DEBUG: Image extraction failed: {str(e)}")
+        raise Exception(f"AI Extraction failed: {str(e)}")
 
 def generate_checklist(tender_id: int):
     # Hardcoded checklist as per requirements
