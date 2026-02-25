@@ -235,19 +235,59 @@ export default function TendersPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {(() => {
-                                            const isExpired = tender.bid_end_date && new Date(tender.bid_end_date) < new Date();
-                                            const status = isExpired ? 'expired' : (tender.status || 'active');
-                                            return (
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status === 'active'
-                                                    ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                                                    : 'bg-red-500/10 text-red-500 border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
-                                                    }`}>
-                                                    <span className={`h-1.5 w-1.5 rounded-full ${status === 'active' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
-                                                    {status}
-                                                </span>
-                                            );
-                                        })()}
+                                        <div className="flex flex-col gap-2">
+                                            {(() => {
+                                                const isExpired = tender.bid_end_date && new Date(tender.bid_end_date) < new Date();
+                                                const status = isExpired ? 'expired' : (tender.status || 'active');
+                                                return (
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit ${status === 'active'
+                                                        ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                                                        : 'bg-red-500/10 text-red-500 border border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]'
+                                                        }`}>
+                                                        <span className={`h-1.5 w-1.5 rounded-full ${status === 'active' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
+                                                        {status}
+                                                    </span>
+                                                );
+                                            })()}
+
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        await supabase
+                                                            .from('tenders')
+                                                            .update({ is_participated: !tender.is_participated })
+                                                            .eq('id', tender.id);
+                                                        refetch();
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-all ${tender.is_participated
+                                                            ? 'bg-primary text-primary-foreground border-primary'
+                                                            : 'bg-transparent text-muted-foreground border-border hover:border-primary/50'
+                                                        }`}
+                                                >
+                                                    {tender.is_participated ? 'PARTICIPATED' : 'PARTICIPATE?'}
+                                                </button>
+
+                                                {tender.is_participated && (
+                                                    <select
+                                                        value={tender.evaluation_status || ''}
+                                                        onChange={async (e) => {
+                                                            await supabase
+                                                                .from('tenders')
+                                                                .update({ evaluation_status: e.target.value })
+                                                                .eq('id', tender.id);
+                                                            refetch();
+                                                        }}
+                                                        className="bg-transparent border-none text-[9px] font-bold text-muted-foreground focus:ring-0 cursor-pointer hover:text-primary transition-colors"
+                                                    >
+                                                        <option value="">Pending</option>
+                                                        <option value="Technical Evaluation">Technical</option>
+                                                        <option value="Financial Evaluation">Financial</option>
+                                                        <option value="Awarded">Awarded</option>
+                                                        <option value="Disqualified">Disqualified</option>
+                                                    </select>
+                                                )}
+                                            </div>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">

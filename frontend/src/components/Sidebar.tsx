@@ -12,7 +12,8 @@ import {
     ChevronRight,
     Bell,
     Search,
-    Plus
+    Plus,
+    Send
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -23,6 +24,7 @@ export default function Sidebar() {
     const menuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
         { name: 'Tenders', icon: FileText, href: '/tenders' },
+        { name: 'Participated Bids', icon: Send, href: '/participated' },
         { name: 'Settings', icon: Settings, href: '/settings' },
     ];
 

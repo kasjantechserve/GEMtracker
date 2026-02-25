@@ -172,6 +172,35 @@ async def upload_pdf(
         print(f"DEBUG: Unexpected error in upload_pdf: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
+@app.post("/api/tenders/analyze-screenshot")
+async def analyze_screenshot(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Analyze a GeM portal screenshot to extract and update tender statuses
+    """
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+    
+    try:
+        print(f"DEBUG: Analyzing screenshot {file.filename}")
+        
+        # Read image bytes
+        image_bytes = await file.read()
+        
+        # Extract details using AI
+        extracted_bids = utils.extract_details_from_image(image_bytes)
+        print(f"DEBUG: Extracted {len(extracted_bids)} bids from screenshot")
+        
+        return {
+            "message": "Screenshot analyzed successfully",
+            "updates": extracted_bids
+        }
+    except Exception as e:
+        print(f"DEBUG: Screenshot analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
 @app.get("/api/tenders/")
 async def get_tenders(current_user: dict = Depends(get_current_user)):
     """Get all tenders for the user's company"""

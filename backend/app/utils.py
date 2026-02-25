@@ -94,6 +94,48 @@ def extract_pdf_details(pdf_path: str):
 
     return details
 
+def extract_details_from_image(image_bytes: bytes):
+    """
+    Extract bid details from a GeM portal screenshot using Gemini AI.
+    """
+    if not api_key:
+        raise Exception("Google API Key not configured")
+
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Construct prompt for GeM screenshot analysis
+        prompt = """
+        Analyze this screenshot from the GeM (Government e-Marketplace) portal.
+        Extract a list of all bids/tenders shown in the image.
+        For each bid, look for:
+        1. Bid Number (format: GEM/year/B/number)
+        2. Status (e.g., Technical Evaluation, Financial Evaluation, Bid Award, Evaluation)
+        3. Bid/RA Status (e.g., Active)
+        4. Any specific results mentioned (e.g., Disqualified, Technically Qualified)
+
+        Return the data as a clean JSON array of objects with these keys: 
+        "bid_number", "evaluation_status", "ra_status", "result_details".
+        If "Technical Evaluation" is highlighted/active in the progress bar, set evaluation_status to "Technical Evaluation".
+        If "Financial Evaluation" is active, set evaluation_status to "Financial Evaluation".
+        If "Bid Award" is active, set evaluation_status to "Awarded".
+        
+        ONLY return the JSON array.
+        """
+
+        # Gemini 1.5 Flash supports image inputs directly
+        response = model.generate_content([
+            prompt,
+            {"mime_type": "image/png", "data": image_bytes}
+        ])
+        
+        # Clean and parse JSON
+        json_text = response.text.replace('```json', '').replace('```', '').strip()
+        return json.loads(json_text)
+    except Exception as e:
+        print(f"DEBUG: Image extraction failed: {e}")
+        raise e
+
 def generate_checklist(tender_id: int):
     # Hardcoded checklist as per requirements
     checklist_data = [

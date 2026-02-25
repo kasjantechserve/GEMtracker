@@ -18,6 +18,8 @@ export interface Tender {
     nickname: string | null
     file_path: string | null
     status: 'active' | 'expired'
+    is_participated?: boolean
+    evaluation_status?: string
     created_at: string
     updated_at: string
     checklist_items?: ChecklistItem[]
