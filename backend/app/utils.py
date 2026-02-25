@@ -23,19 +23,16 @@ def extract_pdf_details(pdf_path: str):
     text = ""
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            # Limit to 2 pages for GeM - 99% of info is here
             for i in range(min(2, len(pdf.pages))):
                 page_text = pdf.pages[i].extract_text()
                 if page_text:
                     text += page_text + "\n"
             
             if text:
-                # Extract Bid Number - GeM Format specific
                 bid_no_match = re.search(r"Bid Number(?:\s*/\s*िबड संख्या)?\s*[:\.]?\s*(GEM/\d{4}/[A-Z]/\d+)", text, re.IGNORECASE)
                 if bid_no_match:
                     details["bid_number"] = bid_no_match.group(1).strip()
 
-                # Extract End Date
                 end_date_match = re.search(r"Bid End Date/Time(?:\s*/\s*िबड समाप्ति तिथि/समय)?\s*(\d{2}-\d{2}-\d{4}\s*\d{2}:\d{2}:\d{2})", text, re.IGNORECASE)
                 if end_date_match:
                     try:
@@ -43,14 +40,12 @@ def extract_pdf_details(pdf_path: str):
                     except:
                         pass
 
-                # Extract Item Category
                 item_cat_match = re.search(r"Item Category(?:\s*/\s*मद श्रेणी)?\s*(.*)", text, re.IGNORECASE)
                 if item_cat_match:
                     details["item_category"] = item_cat_match.group(1).strip()
     except Exception as e:
         print(f"DEBUG: Fast regex scan failed: {e}")
 
-    # 2. AI FALLBACK (Only if regex missed critical info)
     dynamic_api_key = os.getenv("GOOGLE_API_KEY")
     if not details.get("bid_number") and dynamic_api_key:
         try:
@@ -78,13 +73,11 @@ def extract_pdf_details(pdf_path: str):
         except Exception as e:
             print(f"DEBUG: AI fallback failed: {e}")
 
-    # Fallback to filename if still nothing
     if not details["bid_number"]:
         filename = os.path.basename(pdf_path)
         if filename.startswith("GEM"):
             details["bid_number"] = filename.split('.')[0]
 
-    # Generate subject if category exists
     if details["item_category"] and not details["subject"]:
         words = details["item_category"].split()
         details["subject"] = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
@@ -101,25 +94,7 @@ def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png")
         raise Exception("Google API Key not configured on server. Please add it to Render Environment Variables.")
 
     try:
-        print(f"DEBUG: Initializing Gemini model for {mime_type} analysis...")
-        # Use REST transport for better compatibility on Render
-        genai.configure(api_key=dynamic_api_key, transport='rest')
-        
-        # Try different model identifiers for maximum compatibility
-        model = None
-        for model_name in ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'models/gemini-1.5-flash']:
-            try:
-                print(f"DEBUG: Attempting to use model: {model_name}")
-                model = genai.GenerativeModel(model_name)
-                # Success here doesn't mean it exists yet, but we'll try it in the call
-                break
-            except:
-                continue
-        
-        if not model:
-            model = genai.GenerativeModel('gemini-1.5-flash') # Fallback to default
-        
-        # Construct prompt for GeM screenshot analysis
+        # Prompt for GeM screenshot analysis
         prompt = """
         Analyze this screenshot from the GeM (Government e-Marketplace) portal.
         Extract a list of all bids/tenders shown in the image.
@@ -138,40 +113,52 @@ def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png")
         ONLY return the JSON array. Do not include any markdown formatting like ```json.
         """
 
-        response = model.generate_content([
-            prompt,
-            {"mime_type": mime_type, "data": image_bytes}
-        ])
+        # Try different model identifiers and API versions for maximum compatibility
+        response = None
+        # Use REST for more consistent behavior on Render
+        genai.configure(api_key=dynamic_api_key, transport='rest')
         
-        if not response or not response.text:
-            print("DEBUG: Gemini returned an empty response")
-            raise Exception("AI model returned an empty response. Image might be unreadable.")
+        # We try explicit model names. The library handles v1/v1beta internally 
+        # but defaulting to v1 for 1.5-flash is preferred.
+        for name in ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'models/gemini-1.5-flash']:
+            try:
+                print(f"DEBUG: Backend attempting AI with model: {name}")
+                model = genai.GenerativeModel(name)
+                response = model.generate_content([
+                    prompt,
+                    {"mime_type": mime_type, "data": image_bytes}
+                ])
+                if response and response.text:
+                    break
+            except Exception as e:
+                print(f"DEBUG: Backend model {name} failed: {str(e)}")
+                continue
+        
+        if not response:
+            raise Exception("No Gemini model variants worked on the server. Please use the Browser-Based fallback.")
 
         # Clean and parse JSON
         json_text = response.text
-        # Remove potential markdown blocks
         if "```" in json_text:
             json_text = json_text.split("```")[1]
             if json_text.startswith("json"):
                 json_text = json_text[4:]
         
         json_text = json_text.strip()
-        print(f"DEBUG: AI raw response: {json_text[:200]}...")
+        print(f"DEBUG: Backend AI raw response: {json_text[:200]}...")
         
         return json.loads(json_text)
     except Exception as e:
-        print(f"DEBUG: Dynamic Image extraction failed: {str(e)}")
-        # Provide a more helpful error if it's an API key issue
+        print(f"DEBUG: Backend Image extraction failed: {str(e)}")
         error_msg = str(e)
         if "API_KEY_INVALID" in error_msg:
-            error_msg = "Invalid Google API Key. Please check your Render configuration."
+            error_msg = "Invalid Google API Key on server."
         elif "API key not found" in error_msg:
-            error_msg = "Google API Key not found. Please add it to Render Environment Variables."
+            error_msg = "Google API Key not found on server."
         
         raise Exception(f"AI Extraction failed: {error_msg}")
 
 def generate_checklist(tender_id: int):
-    # Hardcoded checklist as per requirements
     checklist_data = [
         {"code": "F-1", "name": "Bidder's General Information"},
         {"code": "F-2", "name": "Proforma of Bank Guarantee for Earnest Money"},
@@ -203,4 +190,3 @@ def generate_checklist(tender_id: int):
         {"code": "DOC-6", "name": "Company Binder 1 Copy"},
     ]
     return checklist_data
-

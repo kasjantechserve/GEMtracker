@@ -249,14 +249,21 @@ export default function ParticipatedTendersPage() {
                 try {
                     const updates = await analyzeScreenshotLocally(file, clientApiKey);
                     setPendingUpdates(updates);
-                    return;
+                    return; // SUCCESS - Exit
                 } catch (localErr: any) {
-                    console.error("DEBUG: Local analysis failed, falling back to backend:", localErr);
+                    console.error("DEBUG: Local analysis failed:", localErr);
+                    // CRITICAL: If client key exists, don't fall back to backend by default 
+                    // because the backend key is likely missing/broken.
+                    // Only fallback if the error NOT related to AI configuration.
+                    if (localErr.message.includes("available") || localErr.message.includes("region") || localErr.message.includes("found")) {
+                        throw localErr; // Show the local AI setup error to user
+                    }
                 }
             }
 
-            // STEP 2: Try Backend Analysis
+            // STEP 2: Try Backend Analysis (Only if no local key or local analysis failed with non-config error)
             const session = await supabase.auth.getSession();
+            // ...
             const token = session.data.session?.access_token;
             const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
             const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
