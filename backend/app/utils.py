@@ -103,7 +103,19 @@ def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png")
     try:
         print(f"DEBUG: Initializing Gemini model for {mime_type} analysis...")
         genai.configure(api_key=dynamic_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Try different model identifiers for maximum compatibility
+        model = None
+        for model_name in ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'models/gemini-1.5-flash']:
+            try:
+                print(f"DEBUG: Attempting to use model: {model_name}")
+                model = genai.GenerativeModel(model_name)
+                # Success here doesn't mean it exists yet, but we'll try it in the call
+                break
+            except:
+                continue
+        
+        if not model:
+            model = genai.GenerativeModel('gemini-1.5-flash') # Fallback to default
         
         # Construct prompt for GeM screenshot analysis
         prompt = """

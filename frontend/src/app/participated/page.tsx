@@ -135,25 +135,58 @@ export default function ParticipatedTendersPage() {
         ONLY return the JSON array. Do not include any markdown formatting like \`\`\`json.
         `;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { inline_data: { mime_type: file.type || "image/png", data: base64Data } }
-                    ]
-                }]
-            })
-        });
+        try {
+            // First try v1
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inline_data: { mime_type: file.type || "image/png", data: base64Data } }
+                        ]
+                    }]
+                })
+            });
 
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error?.message || "Client-side analysis failed");
+            if (!response.ok) {
+                const err = await response.json();
+                const errMsg = err.error?.message || "Client-side analysis failed";
+
+                // If it's a 404 or specifically says model not found, try v1beta
+                if (response.status === 404 || errMsg.includes('not found')) {
+                    console.log("DEBUG: v1 failed, trying v1beta fallback...");
+                    const v1betaResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: prompt },
+                                    { inline_data: { mime_type: file.type || "image/png", data: base64Data } }
+                                ]
+                            }]
+                        })
+                    });
+
+                    if (v1betaResp.ok) {
+                        const result = await v1betaResp.json();
+                        return parseGeminiResponse(result);
+                    }
+                }
+                throw new Error(errMsg);
+            }
+
+            const result = await response.json();
+            return parseGeminiResponse(result);
+        } catch (error: any) {
+            console.error("DEBUG: analyzeScreenshotLocally Error:", error);
+            throw error;
         }
+    };
 
-        const result = await response.json();
+    const parseGeminiResponse = (result: any) => {
         const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
         // Clean and parse JSON
