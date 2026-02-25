@@ -102,7 +102,9 @@ def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png")
 
     try:
         print(f"DEBUG: Initializing Gemini model for {mime_type} analysis...")
-        genai.configure(api_key=dynamic_api_key)
+        # Use REST transport for better compatibility on Render
+        genai.configure(api_key=dynamic_api_key, transport='rest')
+        
         # Try different model identifiers for maximum compatibility
         model = None
         for model_name in ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'models/gemini-1.5-flash']:

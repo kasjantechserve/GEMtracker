@@ -38,6 +38,7 @@ export default function ParticipatedTendersPage() {
     const [isPasting, setIsPasting] = useState(false);
     const [clientApiKey, setClientApiKey] = useState<string>('');
     const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+    const [testingAI, setTestingAI] = useState(false);
 
     useEffect(() => {
         const savedKey = localStorage.getItem('GEM_CLIENT_AI_KEY');
@@ -183,6 +184,34 @@ export default function ParticipatedTendersPage() {
         } catch (error: any) {
             console.error("DEBUG: analyzeScreenshotLocally Error:", error);
             throw error;
+        }
+    };
+
+    const testConnection = async () => {
+        if (!clientApiKey) {
+            alert("Please enter an API key first.");
+            return;
+        }
+        setTestingAI(true);
+        try {
+            // Very simple prompt to test connection
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${clientApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: "Hello" }] }]
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || "Connection failed");
+            }
+            alert("AI Connection Successful! Flash model is ready.");
+        } catch (error: any) {
+            alert(`AI Connection Failed: ${error.message}`);
+        } finally {
+            setTestingAI(false);
         }
     };
 
@@ -341,6 +370,14 @@ export default function ParticipatedTendersPage() {
                             className="px-6 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold"
                         >
                             Save Locally
+                        </button>
+                        <button
+                            onClick={testConnection}
+                            disabled={testingAI}
+                            className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-card disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {testingAI ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                            Test
                         </button>
                     </div>
                 </div>
