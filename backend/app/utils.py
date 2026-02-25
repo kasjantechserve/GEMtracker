@@ -8,11 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configure Google AI
-api_key = os.getenv("GOOGLE_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-
 def extract_pdf_details(pdf_path: str):
     """
     Extract bid details from PDF using fast regex matching with AI fallback.
@@ -25,9 +20,9 @@ def extract_pdf_details(pdf_path: str):
     }
 
     # 1. FAST REGEX SCAN (Directly read first 2 pages)
+    text = ""
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            text = ""
             # Limit to 2 pages for GeM - 99% of info is here
             for i in range(min(2, len(pdf.pages))):
                 page_text = pdf.pages[i].extract_text()
@@ -56,12 +51,13 @@ def extract_pdf_details(pdf_path: str):
         print(f"DEBUG: Fast regex scan failed: {e}")
 
     # 2. AI FALLBACK (Only if regex missed critical info)
-    if not details.get("bid_number") and api_key:
+    dynamic_api_key = os.getenv("GOOGLE_API_KEY")
+    if not details.get("bid_number") and dynamic_api_key:
         try:
             print("DEBUG: Regex missed Bid Number. Attempting AI extraction with Gemini...")
-            model = genai.GenerativeModel('gemini-1.5-flash') # Ultra-fast model
+            genai.configure(api_key=dynamic_api_key)
+            model = genai.GenerativeModel('gemini-1.5-flash') 
             
-            # Use same text context already extracted for efficiency
             prompt = f"""
             Extract GeM Bid Number, End Date (DD-MM-YYYY HH:MM:SS), and Item Category.
             Return ONLY clean JSON.
@@ -69,7 +65,8 @@ def extract_pdf_details(pdf_path: str):
             """
 
             response = model.generate_content(prompt)
-            ai_data = json.loads(response.text.replace('```json', '').replace('```', '').strip())
+            json_text = response.text.replace('```json', '').replace('```', '').strip()
+            ai_data = json.loads(json_text)
             
             if not details["bid_number"]: details["bid_number"] = ai_data.get("bid_number")
             if not details["item_category"]: details["item_category"] = ai_data.get("item_category")
@@ -98,12 +95,14 @@ def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png")
     """
     Extract bid details from a GeM portal screenshot using Gemini AI.
     """
-    if not api_key:
-        print("DEBUG: Google API Key is missing in environment variables")
-        raise Exception("Google API Key not configured on server")
+    dynamic_api_key = os.getenv("GOOGLE_API_KEY")
+    if not dynamic_api_key:
+        print("DEBUG: CRITICAL - GOOGLE_API_KEY is missing from environment")
+        raise Exception("Google API Key not configured on server. Please add it to Render Environment Variables.")
 
     try:
         print(f"DEBUG: Initializing Gemini model for {mime_type} analysis...")
+        genai.configure(api_key=dynamic_api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Construct prompt for GeM screenshot analysis
@@ -125,19 +124,18 @@ def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png")
         ONLY return the JSON array. Do not include any markdown formatting like ```json.
         """
 
-        # Gemini 1.5 Flash supports image inputs directly via dictionary
-        # Some older versions might need 'inline_data' wrapper, but this is standard for 0.4.0+
         response = model.generate_content([
             prompt,
             {"mime_type": mime_type, "data": image_bytes}
         ])
         
-        if not response.text:
+        if not response or not response.text:
             print("DEBUG: Gemini returned an empty response")
-            raise Exception("Empty response from AI model")
+            raise Exception("AI model returned an empty response. Image might be unreadable.")
 
         # Clean and parse JSON
         json_text = response.text
+        # Remove potential markdown blocks
         if "```" in json_text:
             json_text = json_text.split("```")[1]
             if json_text.startswith("json"):
@@ -148,8 +146,15 @@ def extract_details_from_image(image_bytes: bytes, mime_type: str = "image/png")
         
         return json.loads(json_text)
     except Exception as e:
-        print(f"DEBUG: Image extraction failed: {str(e)}")
-        raise Exception(f"AI Extraction failed: {str(e)}")
+        print(f"DEBUG: Dynamic Image extraction failed: {str(e)}")
+        # Provide a more helpful error if it's an API key issue
+        error_msg = str(e)
+        if "API_KEY_INVALID" in error_msg:
+            error_msg = "Invalid Google API Key. Please check your Render configuration."
+        elif "API key not found" in error_msg:
+            error_msg = "Google API Key not found. Please add it to Render Environment Variables."
+        
+        raise Exception(f"AI Extraction failed: {error_msg}")
 
 def generate_checklist(tender_id: int):
     # Hardcoded checklist as per requirements
