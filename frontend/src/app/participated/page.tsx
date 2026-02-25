@@ -39,15 +39,23 @@ export default function ParticipatedTendersPage() {
     const [clientApiKey, setClientApiKey] = useState<string>('');
     const [showApiKeyInput, setShowApiKeyInput] = useState(false);
     const [testingAI, setTestingAI] = useState(false);
+    const [workingConfig, setWorkingConfig] = useState<{ version: string, model: string } | null>(null);
 
     useEffect(() => {
         const savedKey = localStorage.getItem('GEM_CLIENT_AI_KEY');
         if (savedKey) setClientApiKey(savedKey);
+
+        const savedConfig = localStorage.getItem('GEM_CLIENT_AI_CONFIG');
+        if (savedConfig) setWorkingConfig(JSON.parse(savedConfig));
     }, []);
 
-    const saveClientApiKey = (key: string) => {
+    const saveClientApiKey = (key: string, config?: { version: string, model: string }) => {
         localStorage.setItem('GEM_CLIENT_AI_KEY', key);
         setClientApiKey(key);
+        if (config) {
+            localStorage.setItem('GEM_CLIENT_AI_CONFIG', JSON.stringify(config));
+            setWorkingConfig(config);
+        }
         setShowApiKeyInput(false);
     };
 
@@ -118,6 +126,10 @@ export default function ParticipatedTendersPage() {
     const analyzeScreenshotLocally = async (file: File, apiKey: string) => {
         console.log("DEBUG: Attempting client-side AI analysis...");
         const base64Data = await fileToBase64(file);
+
+        // Use the discovered config or fall back to defaults
+        const config = workingConfig || { version: 'v1', model: 'gemini-1.5-flash' };
+
         const prompt = `
         Analyze this screenshot from the GeM (Government e-Marketplace) portal.
         Extract a list of all bids/tenders shown in the image.
@@ -137,8 +149,7 @@ export default function ParticipatedTendersPage() {
         `;
 
         try {
-            // First try v1
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -153,30 +164,7 @@ export default function ParticipatedTendersPage() {
 
             if (!response.ok) {
                 const err = await response.json();
-                const errMsg = err.error?.message || "Client-side analysis failed";
-
-                // If it's a 404 or specifically says model not found, try v1beta
-                if (response.status === 404 || errMsg.includes('not found')) {
-                    console.log("DEBUG: v1 failed, trying v1beta fallback...");
-                    const v1betaResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { text: prompt },
-                                    { inline_data: { mime_type: file.type || "image/png", data: base64Data } }
-                                ]
-                            }]
-                        })
-                    });
-
-                    if (v1betaResp.ok) {
-                        const result = await v1betaResp.json();
-                        return parseGeminiResponse(result);
-                    }
-                }
-                throw new Error(errMsg);
+                throw new Error(err.error?.message || "Client-side analysis failed");
             }
 
             const result = await response.json();
@@ -193,23 +181,44 @@ export default function ParticipatedTendersPage() {
             return;
         }
         setTestingAI(true);
-        try {
-            // Very simple prompt to test connection
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${clientApiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: "Hello" }] }]
-                })
-            });
 
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error?.message || "Connection failed");
+        const versions = ['v1', 'v1beta'];
+        const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash-001', 'gemini-pro'];
+
+        let found = false;
+
+        try {
+            for (const version of versions) {
+                for (const model of models) {
+                    console.log(`DEBUG: Testing ${version}/${model}...`);
+                    try {
+                        const response = await fetch(`https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${clientApiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: "ping" }] }]
+                            })
+                        });
+
+                        if (response.ok) {
+                            const config = { version, model };
+                            saveClientApiKey(clientApiKey, config);
+                            alert(`Success! Found working configuration: ${version} with ${model}.`);
+                            found = true;
+                            break;
+                        }
+                    } catch (e) {
+                        continue;
+                    }
+                }
+                if (found) break;
             }
-            alert("AI Connection Successful! Flash model is ready.");
+
+            if (!found) {
+                alert("AI Connection Failed: Could not find a working model or API version for your key. Please check your Google AI Studio settings.");
+            }
         } catch (error: any) {
-            alert(`AI Connection Failed: ${error.message}`);
+            alert(`AI Search Error: ${error.message}`);
         } finally {
             setTestingAI(false);
         }
