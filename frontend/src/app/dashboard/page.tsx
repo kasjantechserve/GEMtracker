@@ -118,9 +118,10 @@ export default function Dashboard() {
                     throw new Error(errorData.detail || 'Bulk upload failed')
                 }
 
-                const results = await response.json()
+                const data = await response.json()
+                const successCount = data.tenders?.length || 0
                 setUploadProgress({ current: files.length, total: files.length, status: 'All files processed!' })
-                alert(`Successfully processed ${results.length} tenders!`)
+                alert(`Successfully processed ${successCount} tenders!${data.errors?.length > 0 ? `\n\nErrors:\n${data.errors.join('\n')}` : ''}`)
             }
             refetch()
         } catch (err: any) {

@@ -172,6 +172,89 @@ async def upload_pdf(
         print(f"DEBUG: Unexpected error in upload_pdf: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
+@app.post("/api/upload-bulk/")
+async def upload_bulk_pdfs(
+    files: List[UploadFile] = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Upload and parse multiple PDF tender documents
+    """
+    results = []
+    errors = []
+    client = get_client()
+    temp_dir = tempfile.gettempdir()
+
+    for file in files:
+        if not file.filename.endswith('.pdf'):
+            errors.append(f"Skipped {file.filename}: Only PDF files are allowed")
+            continue
+            
+        temp_path = None
+        try:
+            print(f"DEBUG: Processing bulk upload for {file.filename}")
+            temp_path = os.path.join(temp_dir, f"bulk_{current_user['id']}_{int(datetime.now().timestamp())}_{file.filename}")
+            
+            with open(temp_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # Extract PDF data
+            details = utils.extract_pdf_details(temp_path)
+            
+            if not details.get("bid_number"):
+                errors.append(f"Failed to process {file.filename}: Could not extract bid number")
+                if os.path.exists(temp_path): os.remove(temp_path)
+                continue
+            
+            # Upload PDF to Supabase Storage
+            storage_path = f"{current_user['company_id']}/{details['bid_number']}_{int(datetime.now().timestamp())}.pdf"
+            
+            with open(temp_path, 'rb') as f:
+                client.storage.from_('tender-pdfs').upload(
+                    storage_path,
+                    f,
+                    file_options={"content-type": "application/pdf"}
+                )
+            
+            # Determine status
+            status = "active"
+            if details.get("bid_end_date"):
+                bid_end_date = details["bid_end_date"]
+                if isinstance(bid_end_date, datetime) and bid_end_date < datetime.utcnow():
+                    status = "expired"
+            
+            # Insert tender record
+            tender_data = {
+                "company_id": current_user["company_id"],
+                "uploaded_by": current_user["id"],
+                "bid_number": details["bid_number"],
+                "bid_end_date": details.get("bid_end_date").isoformat() if details.get("bid_end_date") else None,
+                "item_category": details.get("item_category"),
+                "subject": details.get("subject"),
+                "file_path": storage_path,
+                "status": status
+            }
+            
+            response = client.table("tenders").insert(tender_data).execute()
+            if response.data:
+                results.append(response.data[0])
+                
+        except Exception as e:
+            print(f"DEBUG: Error processing {file.filename}: {e}")
+            errors.append(f"Error processing {file.filename}: {str(e)}")
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
+    
+    if not results and errors:
+        raise HTTPException(status_code=400, detail="\n".join(errors))
+        
+    return {
+        "message": f"Processed {len(results)} tenders successfully",
+        "tenders": results,
+        "errors": errors
+    }
+
 @app.post("/api/tenders/analyze-screenshot")
 async def analyze_screenshot(
     file: UploadFile = File(...),
